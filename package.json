@@ -10,8 +10,8 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
-    "smoke:local": "tsx --env-file=.env.local scripts/smoke-test.ts",
-    "smoke:prod": "tsx --env-file=.env.local scripts/smoke-test.ts https://ai-all-app.vercel.app"
+    "smoke:local": "tsx scripts/smoke-test.ts",
+    "smoke:prod": "tsx scripts/smoke-test.ts https://ai-all-app.vercel.app"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",

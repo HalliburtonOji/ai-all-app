@@ -20,8 +20,37 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { chromium, type Page } from "@playwright/test";
 import { mkdir, writeFile } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+
+// Load .env.local if it exists (local dev convenience). In CI, this file
+// doesn't exist — env vars come from the workflow's `env:` block instead,
+// so we silently skip. This avoids the tsx --env-file flag, which crashes
+// when the file is missing.
+function loadDotEnvLocal() {
+  const path = join(process.cwd(), ".env.local");
+  if (!existsSync(path)) return;
+  const content = readFileSync(path, "utf8");
+  for (const rawLine of content.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    const eq = line.indexOf("=");
+    if (eq === -1) continue;
+    const key = line.slice(0, eq).trim();
+    let value = line.slice(eq + 1).trim();
+    // Strip optional surrounding quotes
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    if (!process.env[key]) {
+      process.env[key] = value;
+    }
+  }
+}
+loadDotEnvLocal();
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const SMOKE_TEST_URL =
