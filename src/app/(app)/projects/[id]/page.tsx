@@ -3,9 +3,11 @@ import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
 import { ProjectTypeBadge } from "@/components/ProjectTypeBadge";
 import { formatDate, type Project } from "@/types/project";
+import type { Message } from "@/types/coach";
 import { toggleArchiveProject } from "../actions";
 import { EditableField } from "./EditableField";
 import { DeleteProjectButton } from "./DeleteProjectButton";
+import { Coach } from "./Coach";
 
 export default async function ProjectDetailPage({
   params,
@@ -27,6 +29,47 @@ export default async function ProjectDetailPage({
 
   const project = data as Project;
   const isArchived = project.status === "archived";
+
+  // Auth — middleware already redirected logged-out users, but we need
+  // user.id below for the conversation lookup.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // Find or create the project's coach conversation. Spec is one
+  // conversation per project for now.
+  let conversationId: string | null = null;
+  if (user) {
+    const { data: existing } = await supabase
+      .from("conversations")
+      .select("id")
+      .eq("project_id", project.id)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (existing) {
+      conversationId = existing.id;
+    } else {
+      const { data: created } = await supabase
+        .from("conversations")
+        .insert({ project_id: project.id, user_id: user.id })
+        .select("id")
+        .single();
+      conversationId = created?.id ?? null;
+    }
+  }
+
+  // Load message history for the conversation
+  let initialMessages: Message[] = [];
+  if (conversationId) {
+    const { data: messageRows } = await supabase
+      .from("messages")
+      .select("id, role, content, created_at")
+      .eq("conversation_id", conversationId)
+      .order("created_at", { ascending: true });
+    initialMessages = (messageRows ?? []) as Message[];
+  }
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6">
@@ -68,7 +111,7 @@ export default async function ProjectDetailPage({
         />
       </div>
 
-      <dl className="mt-8 grid grid-cols-1 gap-3 rounded-lg border border-zinc-200 bg-white p-4 text-sm sm:grid-cols-2 dark:border-zinc-800 dark:bg-zinc-950">
+      <dl className="mt-6 grid grid-cols-1 gap-3 rounded-lg border border-zinc-200 bg-white p-4 text-sm sm:grid-cols-2 dark:border-zinc-800 dark:bg-zinc-950">
         <div>
           <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">
             Created on
@@ -87,11 +130,21 @@ export default async function ProjectDetailPage({
         </div>
       </dl>
 
-      <section className="mt-8 rounded-lg border border-dashed border-zinc-300 bg-white p-8 text-center dark:border-zinc-700 dark:bg-zinc-950">
-        <p className="text-zinc-600 dark:text-zinc-400">
-          Tools, lessons, conversations, and earnings will live here soon.
-        </p>
-      </section>
+      <div className="mt-8">
+        <h2 className="mb-3 text-lg font-semibold text-black dark:text-white">
+          Coach
+        </h2>
+        {conversationId ? (
+          <Coach
+            conversationId={conversationId}
+            initialMessages={initialMessages}
+          />
+        ) : (
+          <p className="rounded-lg border border-dashed border-zinc-300 bg-white p-6 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-950">
+            Coach is unavailable — try refreshing the page.
+          </p>
+        )}
+      </div>
 
       <div className="mt-10 flex flex-wrap items-start gap-3 border-t border-zinc-200 pt-6 dark:border-zinc-800">
         <form action={toggleArchiveProject}>

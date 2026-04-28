@@ -36,5 +36,11 @@ export default defineConfig({
     timeout: 120_000,
     stdout: "ignore",
     stderr: "pipe",
+    // Tells the app to use deterministic mock responses instead of calling
+    // external APIs (Anthropic). Only set during test runs — never in
+    // `npm run dev` (where you want a real coach for manual testing).
+    env: {
+      E2E_TEST_MODE: "true",
+    },
   },
 });

@@ -14,9 +14,12 @@ jobs:
 
     # Public Supabase env vars are needed at build time AND test time.
     # Service role key is added only to the cleanup step.
+    # E2E_TEST_MODE puts the coach API into deterministic-mock mode so
+    # tests don't hit Anthropic.
     env:
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      E2E_TEST_MODE: "true"
 
     steps:
       - name: Checkout repository
