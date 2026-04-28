@@ -1,3 +1,9 @@
+# AI All App
+
+[![Tests](https://github.com/HalliburtonOji/ai-all-app/actions/workflows/test.yml/badge.svg)](https://github.com/HalliburtonOji/ai-all-app/actions/workflows/test.yml)
+
+Live at **https://ai-all-app.vercel.app**.
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

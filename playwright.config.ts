@@ -8,7 +8,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: isCI,
   retries: isCI ? 1 : 0,
-  workers: isCI ? 2 : undefined,
+  // CI uses a single worker for stability — sequential signups avoid
+  // hitting Supabase auth rate limits and reduce flakiness.
+  workers: isCI ? 1 : undefined,
   reporter: isCI ? [["html"], ["github"]] : "html",
   timeout: 30_000,
   expect: { timeout: 10_000 },
@@ -25,7 +27,10 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npm run dev",
+    // In CI we run against the production build (`npm run start`) so tests
+    // exercise the same code Vercel deploys. Locally we use the dev server
+    // for hot-reload speed.
+    command: isCI ? "npm run start" : "npm run dev",
     url: baseURL,
     reuseExistingServer: !isCI,
     timeout: 120_000,
