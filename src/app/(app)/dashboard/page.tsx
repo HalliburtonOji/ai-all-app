@@ -2,6 +2,8 @@ import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
 import { ProjectCard } from "@/components/ProjectCard";
 import type { Project } from "@/types/project";
+import type { UserFact } from "@/types/coach";
+import { UserMemoryPanel } from "./UserMemoryPanel";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -9,13 +11,32 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: projects } = await supabase
-    .from("projects")
-    .select("*")
-    .order("updated_at", { ascending: false })
-    .limit(3);
+  const [{ data: projects }, { data: userFactRows }, { data: meta }] =
+    await Promise.all([
+      supabase
+        .from("projects")
+        .select("*")
+        .order("updated_at", { ascending: false })
+        .limit(3),
+      supabase
+        .from("user_facts")
+        .select("id, fact, source_project_id, pinned, created_at, updated_at")
+        .order("pinned", { ascending: false })
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("user_meta")
+        .select("user_facts_last_extracted_at")
+        .maybeSingle(),
+    ]);
 
   const recentProjects: Project[] = projects ?? [];
+  const userFacts: UserFact[] = (userFactRows ?? []) as UserFact[];
+  const hasExtractedYet =
+    !!meta && meta.user_facts_last_extracted_at !== null;
+  const isAdmin =
+    !!user &&
+    ((!!process.env.ADMIN_USER_ID && user.id === process.env.ADMIN_USER_ID) ||
+      process.env.E2E_TEST_MODE === "true");
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6">
@@ -35,6 +56,12 @@ export default async function DashboardPage() {
           + New Project
         </Link>
       </div>
+
+      <UserMemoryPanel
+        facts={userFacts}
+        hasExtractedYet={hasExtractedYet}
+        isAdmin={isAdmin}
+      />
 
       <section className="mt-10">
         <div className="mb-4 flex items-end justify-between">

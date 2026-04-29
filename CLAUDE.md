@@ -271,6 +271,34 @@ Same four keys as above. Used by both workflows.
 
 > Add a new entry to the **top** of this list for each work session. Include: date, what shipped, decisions made, and anything left dangling.
 
+### 2026-04-29 (later still 6) — A2 of coach deepening: cross-project (user-level) memory
+
+**Shipped:**
+- Migration [supabase/migrations/20260429211441_add_user_facts.sql](supabase/migrations/20260429211441_add_user_facts.sql): `user_meta` table (per-user metadata, tracks `user_facts_last_extracted_at`) + `user_facts` table (id, user_id, fact ≤500 chars, source_project_id, pinned, timestamps) with RLS by `user_id = auth.uid()` for select/insert/update/delete. Composite index on `(user_id, pinned desc, created_at desc)`.
+- Extraction [src/lib/coach/extract-user-facts.ts](src/lib/coach/extract-user-facts.ts): scans all conversations across a user's projects, calls Sonnet 4.6 with a profile-level extraction prompt, inserts via service role, runs `enforceUserFactCap` (drops oldest non-pinned past 100). Mock mode inserts a deterministic `[mock user fact ${ts}-${hex}]` row + runs cap enforcement. `touchMeta` upserts `user_meta.user_facts_last_extracted_at` on every run.
+- Cron [src/app/api/cron/extract-facts/route.ts](src/app/api/cron/extract-facts/route.ts): after the per-project loop, runs user-level extraction once per distinct user_id and folds the result counts into the response payload.
+- Injection [src/app/api/coach/stream/route.ts](src/app/api/coach/stream/route.ts) + [src/lib/coach/build-memory.ts](src/lib/coach/build-memory.ts): user_facts loaded alongside project_facts and injected into the system prompt as "What you remember about this user (across all their projects)". Mock response appends ` [user-memory: N]` suffix when user_facts exist.
+- Dashboard panel [src/app/(app)/dashboard/UserMemoryPanel.tsx](src/app/(app)/dashboard/UserMemoryPanel.tsx) + [UserFactItem.tsx](src/app/(app)/dashboard/UserFactItem.tsx) + [AdminExtractUserFactsButton.tsx](src/app/(app)/dashboard/AdminExtractUserFactsButton.tsx) + actions in [user-fact-actions.ts](src/app/(app)/dashboard/user-fact-actions.ts). Same edit/delete/pin pattern as the project-memory tab. "About you" header + "Remembering N things" pill. Empty-state copy varies based on whether extraction has run yet.
+- 6 new E2E tests in [tests/e2e/user-memory.spec.ts](tests/e2e/user-memory.spec.ts): edit, delete-with-confirm, pin sort-to-top, RLS cross-user dashboard isolation, injection into coach prompt across projects, 100-fact cap. Total project E2E tests: **40 (all passing locally; one streaming test occasionally flakes under parallel load with ECONNRESET, passes solo)**.
+
+**Decisions:**
+- Same Sonnet-vs-Haiku, mock-row-per-call, and admin-bypass-in-test-mode patterns as the project-memory feature — keep cognitive overhead low.
+- 100-fact cap (vs project memory's 50) — user-level facts cover broader ground (location, working style, multiple projects of context) so they need more headroom.
+- "About you" lives on `/dashboard`, not on each project page — it's by definition cross-cutting.
+- User memory is silent in the coach UI (no "I remember…" affordance), same as project memory. Visible in the dashboard panel only.
+- Cron does both passes (project-level then user-level) in one nightly run, so user facts are at most 24h behind the conversations they're derived from.
+
+**Hiccup + fix:**
+- The user-memory delete test failed once on a full-suite run: `toHaveCount(0)` on the fact text passed immediately because the `confirmDelete` mode replaces the fact text with "Delete this fact? This cannot be undone." — so the assertion succeeded *before* the server action committed to the DB. The reload then re-fetched the still-existing row and the post-reload assertion failed. Fix: assert on `[data-user-fact-id]` count instead of the text — the entire `<li>` only disappears after the action completes and revalidation re-renders. The same race in principle affects the project-memory delete test, but it has been passing reliably; left it alone (rule of "don't fix what isn't breaking").
+
+**Env additions:** none new — reuses `CRON_SECRET`, `ADMIN_USER_ID`, `E2E_TEST_MODE` from the project-memory feature. Halli still needs to add `CRON_SECRET` and `ADMIN_USER_ID` to Vercel for production cron to work.
+
+**Next-session candidates:**
+- Wire `CRON_SECRET` + `ADMIN_USER_ID` into Vercel UI so the nightly cron actually runs in prod.
+- First Studio tool (image gen).
+- Test foundation refactor (per-worker storageState — see entry below).
+- Coverage gaps from STATUS.md.
+
 ### 2026-04-29 (later still 5) — Attempted shared-auth storageState refactor, reverted
 
 **Tried:** Playwright's standard `storageState` pattern — one setup spec signs up a "test runner" user, saves auth cookies to `playwright/.auth/user.json`, all tests inherit that state. Goal: drop signups from ~30/run to ~3/run.

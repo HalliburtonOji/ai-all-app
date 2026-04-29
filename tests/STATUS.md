@@ -1,6 +1,6 @@
 # Test Health Status
 
-**Last updated:** 2026-04-29
+**Last updated:** 2026-04-29 (A2 — user-level memory shipped)
 
 ## Coverage by Feature
 
@@ -12,6 +12,7 @@
 | Coach (Part 2) — streaming, multi-thread isolation, RLS on /api/coach/stream, rename, delete, auto-title, regenerate, input lock during stream | 8 | 2026-04-29 | Mock streaming emits 4 chunks 50ms apart. Auto-title tested in mock mode. |
 | Project memory — edit fact, delete fact, pin sort-to-top, RLS cross-user, memory injection into coach system prompt, 50-fact cap enforcement, cron endpoint auth | 7 | 2026-04-29 | Mock extraction inserts a deterministic `[mock fact …]` row + runs the same cap enforcement, so end-to-end behavior is testable without calling Anthropic. The admin button is exposed to any user when `E2E_TEST_MODE=true` so tests can drive extraction without impersonating the admin. |
 | Coach suggestions tray — appears after first response, click fills input (no auto-send), no tray on empty thread, RLS cross-user on /api/coach/suggest | 4 | 2026-04-29 | Mock-mode endpoint returns 3 deterministic suggestions; production calls Sonnet 4.6. Tray renders nothing until first response (or on fresh empty thread). Click pre-fills textarea + focuses it but never auto-sends. |
+| User-level (cross-project) memory — edit fact, delete fact (with confirm), pin sort-to-top, RLS cross-user dashboard isolation, injection into coach system prompt across all projects, 100-fact cap enforcement | 6 | 2026-04-29 | Lives on `/dashboard` ("About you" panel). Mock extraction inserts a deterministic `[mock user fact …]` row + runs the same cap enforcement, so end-to-end behavior is testable without Anthropic. Same admin-button bypass via `E2E_TEST_MODE=true` as project memory. |
 
 ## Untested by Design
 
@@ -36,11 +37,14 @@
 - **Coach: copy-to-clipboard** — Browser clipboard requires extra Playwright permissions; tested manually.
 - **Memory: cron run end-to-end** — `/api/cron/extract-facts` auth is tested; the actual scan-all-projects loop is not. Low value — the per-project extraction is what's important and is tested via the admin button.
 - **Memory: source_thread_id on fact rows** — In mock mode we set it to the most recent thread; not asserted in E2E.
+- **User memory: cron-driven cross-project extraction** — Mock mode + admin button covers the extraction + insert + cap path. The real cron loop (scan all projects per user, dedupe, decide what's profile-level vs project-level) is verified manually by clicking "Run user extraction now" on a real account.
+- **User memory: source_project_id attribution on user facts** — Set in extraction (most-recent project of the user); not asserted in E2E.
 
 ## Recent Test Runs
 
 | Date | Branch | Outcome | Runtime | Where |
 |------|--------|---------|---------|-------|
+| 2026-04-29 | main | ✅ pass (40/40, 1 streaming flake on parallel run) | 2.8 min | local (A2 — user-level memory: schema, extraction, injection, dashboard panel, 6 tests) |
 | 2026-04-29 | main | ✅ pass (34/34) | 1.9 min | local (Coach suggestions tray + cap-test data-attribute fix) |
 | 2026-04-29 | main | ✅ pass (30/30) | 1.7 min | local (Project memory feature complete) |
 | 2026-04-29 | main | ✅ pass (23/23) | ~3 min | local (Coach Part 2 complete) |

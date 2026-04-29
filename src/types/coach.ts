@@ -35,6 +35,23 @@ export interface ProjectFact {
   updated_at?: string;
 }
 
+/**
+ * A user-level (cross-project) durable fact. Profile-level things the
+ * coach knows about the person across all their Projects:
+ * "User is based in London", "User prefers concise responses".
+ *
+ * Distinct from `ProjectFact` which is scoped to a single Project.
+ */
+export interface UserFact {
+  id: string;
+  user_id?: string;
+  fact: string;
+  source_project_id?: string | null;
+  pinned: boolean;
+  created_at: string;
+  updated_at?: string;
+}
+
 export interface Message {
   id: string;
   conversation_id?: string;

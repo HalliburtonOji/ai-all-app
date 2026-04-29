@@ -4,6 +4,10 @@ import {
   extractFactsForProject,
   type ExtractionResult,
 } from "@/lib/coach/extract-facts";
+import {
+  extractUserFacts,
+  type UserExtractionResult,
+} from "@/lib/coach/extract-user-facts";
 
 // Force dynamic — never cache.
 export const dynamic = "force-dynamic";
@@ -51,22 +55,48 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: projErr.message }, { status: 500 });
   }
 
-  const results: ExtractionResult[] = [];
+  const projectResults: ExtractionResult[] = [];
   for (const project of projects ?? []) {
     const r = await extractFactsForProject(supabase, project.id);
-    results.push(r);
+    projectResults.push(r);
+  }
+
+  // After project-level extraction, run user-level extraction for every
+  // user that has at least one project. The first SELECT only fetched id,
+  // so re-fetch user_id distinct to drive the user pass.
+  const { data: projectsWithUsers } = await supabase
+    .from("projects")
+    .select("user_id")
+    .limit(MAX_PROJECTS_PER_RUN);
+  const distinctUserIds = Array.from(
+    new Set(
+      ((projectsWithUsers ?? []) as { user_id: string }[]).map((p) => p.user_id),
+    ),
+  );
+
+  const userResults: UserExtractionResult[] = [];
+  for (const userId of distinctUserIds) {
+    const r = await extractUserFacts(supabase, userId);
+    userResults.push(r);
   }
 
   const summary = {
-    projectsScanned: results.length,
-    projectsWithNewFacts: results.filter((r) => r.newFactsCount > 0).length,
-    totalNewFacts: results.reduce((sum, r) => sum + r.newFactsCount, 0),
-    totalDroppedFacts: results.reduce(
-      (sum, r) => sum + r.droppedFactsCount,
-      0,
-    ),
-    errors: results.filter((r) => r.error).length,
+    projectsScanned: projectResults.length,
+    projectsWithNewFacts: projectResults.filter((r) => r.newFactsCount > 0).length,
+    totalNewProjectFacts: projectResults.reduce((sum, r) => sum + r.newFactsCount, 0),
+    totalDroppedProjectFacts: projectResults.reduce((sum, r) => sum + r.droppedFactsCount, 0),
+    usersScanned: userResults.length,
+    usersWithNewFacts: userResults.filter((r) => r.newFactsCount > 0).length,
+    totalNewUserFacts: userResults.reduce((sum, r) => sum + r.newFactsCount, 0),
+    totalDroppedUserFacts: userResults.reduce((sum, r) => sum + r.droppedFactsCount, 0),
+    projectErrors: projectResults.filter((r) => r.error).length,
+    userErrors: userResults.filter((r) => r.error).length,
   };
 
-  return NextResponse.json({ summary, results });
+  return NextResponse.json({
+    summary,
+    projectResults,
+    userResults,
+  });
 }
+
