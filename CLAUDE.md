@@ -155,7 +155,7 @@ Whenever you build, modify, or remove a feature in this project, you MUST:
 |---|---|---|
 | **Local Playwright** | `npm run test:e2e` runs the full E2E suite against the dev server using mock mode. ~30s. | Run before pushing. |
 | **CI Tests** | Every push triggers [.github/workflows/test.yml](.github/workflows/test.yml). Full Playwright suite against a production build with mock mode. ~5 min. | All branches + PRs. |
-| **Production Smoke Test** | After every successful Tests run on `main`, [.github/workflows/smoke-test.yml](.github/workflows/smoke-test.yml) runs [scripts/smoke-test.ts](scripts/smoke-test.ts) — Claude drives Playwright through real user journeys against the live deploy. Reports as a workflow artifact. | `main` branch only. |
+| **Production Smoke Test** | **Manual-trigger only** (changed 2026-04-29 to control API cost). [.github/workflows/smoke-test.yml](.github/workflows/smoke-test.yml) runs [scripts/smoke-test.ts](scripts/smoke-test.ts) — Claude drives Playwright through real user journeys against the live deploy. Reports as a workflow artifact. | Click "Run workflow" on the workflow page in the Actions tab when you want one. |
 | **Test cleanup** | [scripts/cleanup-test-users.mjs](scripts/cleanup-test-users.mjs) — deletes any user with email matching `test-<ts>-<hex>@aiallapp.test` after each CI run. Uses Supabase service role key. | CI step + can be run locally. |
 
 ---
@@ -270,6 +270,28 @@ Same four keys as above. Used by both workflows.
 ## 14. Session Log
 
 > Add a new entry to the **top** of this list for each work session. Include: date, what shipped, decisions made, and anything left dangling.
+
+### 2026-04-29 (later still 2) — Attempted middleware → proxy rename, reverted
+
+**Tried:** Renaming `src/middleware.ts` to `src/proxy.ts` (per the Next.js 16 deprecation warning) with the `middleware` export renamed to `proxy`.
+
+**Result:** 20 of 23 E2E tests timed out. UI-navigating tests all hung; only direct-API-only tests passed. Diagnosis: Next.js 16.2.4 emits the deprecation warning ("use proxy") but does NOT yet load `proxy.ts` as a runtime convention — the file is silently ignored, Supabase session cookies aren't refreshed across requests, and authenticated navigation breaks.
+
+**Reverted to** `src/middleware.ts` with `middleware` export. Tests pass again (per the prior 23/23 run).
+
+**Lesson:** before attempting again, read https://nextjs.org/docs/messages/middleware-to-proxy and verify the runtime version actually picks up `proxy.ts`. The deprecation warning alone is not proof of support.
+
+### 2026-04-29 (later still) — Smoke test → manual-trigger only
+
+**Shipped:**
+- [.github/workflows/smoke-test.yml](.github/workflows/smoke-test.yml) trigger changed from `workflow_run` (auto-fire after every successful Tests run on main) to `workflow_dispatch` (manual button in GitHub Actions tab).
+
+**Why:** Each smoke run costs a few cents on Anthropic. With auto-fire on every main push, the cost compounds for incremental commits that don't really need end-to-end production verification. Manual gives Halli control: click "Run workflow" only after a meaningful feature ships.
+
+**How to use:**
+- https://github.com/HalliburtonOji/ai-all-app/actions/workflows/smoke-test.yml
+- Click **"Run workflow"** button (top right). Pick branch `main`, click green Run workflow button.
+- Smoke test runs ~3–5 min, report in artifacts as before.
 
 ### 2026-04-29 (later) — Coach Part 2: streaming, multi-thread, polish
 

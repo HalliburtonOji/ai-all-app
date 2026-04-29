@@ -1,17 +1,18 @@
 name: Smoke Test (Production)
 
-# Triggers ONLY after the Tests workflow finishes on the main branch.
-# Skipped for feature branches and PRs (those don't deploy to production).
+# Manual-trigger only — runs the AI smoke tester against the live
+# production deploy when YOU click "Run workflow" in the GitHub Actions
+# tab. Each run hits the Anthropic API and costs a few cents, so we
+# don't auto-fire on every push.
+#
+# When to run it: after shipping a meaningful change to production
+# that you'd like verified end-to-end (signup, projects, coach, etc.).
 on:
-  workflow_run:
-    workflows: ["Tests"]
-    types: [completed]
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   smoke:
     name: AI Smoke Test
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
