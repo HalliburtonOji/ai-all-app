@@ -26,7 +26,7 @@ export async function signup(formData: FormData) {
   const origin = (await headers()).get("origin");
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -36,6 +36,15 @@ export async function signup(formData: FormData) {
 
   if (error) {
     redirect(`/signup?error=${encodeURIComponent(error.message)}`);
+  }
+
+  // If email confirmation is disabled in Supabase, signUp returns a session
+  // and the user is already authenticated — send them straight to /dashboard.
+  // If confirmation is required, no session is returned; show the check-email
+  // message on /login.
+  if (data.session) {
+    revalidatePath("/", "layout");
+    redirect("/dashboard");
   }
 
   redirect(

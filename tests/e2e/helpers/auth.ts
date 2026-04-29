@@ -36,9 +36,18 @@ export async function signUpNewUser(
   await page.locator('input[name="password"]').fill(u.password);
   await page.getByRole("button", { name: "Sign up", exact: true }).click();
 
-  // Our signup action redirects to /login with a success message,
-  // even when the user is created and a session exists.
-  await page.waitForURL(/\/login/);
+  // With email confirmation OFF (our test config), signup redirects straight
+  // to /dashboard because the session is established immediately. With
+  // confirmation ON, signup redirects to /login with a message and we log in
+  // manually. Wait for whichever lands and branch.
+  await page.waitForURL(/\/(dashboard|login)/);
+
+  if (page.url().includes("/dashboard")) {
+    await expect(
+      page.getByRole("heading", { name: /welcome/i }),
+    ).toBeVisible();
+    return u;
+  }
 
   await loginAs(page, u.email, u.password);
   return u;

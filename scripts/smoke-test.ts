@@ -223,7 +223,7 @@ const tools: Anthropic.Messages.Tool[] = [
   {
     name: "report_issue",
     description:
-      "Log a bug. Use only for actual issues, not commentary. Severities: critical (broken/blocked), warning (suboptimal/recoverable), cosmetic (visual nit).",
+      "Log a bug. Use sparingly — only for actual issues, not commentary. **Before reporting `critical`, you MUST attempt at least one alternate verification** (e.g., direct navigation, refresh, retry the action) to confirm the failure isn't transient or a misread. False-positive criticals turn the workflow red without cause. Severities: critical (fully blocks a real user, confirmed via alternate check), warning (degraded or recoverable), cosmetic (visual nit).",
     input_schema: {
       type: "object",
       properties: {
