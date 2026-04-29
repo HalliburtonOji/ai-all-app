@@ -291,10 +291,9 @@ Same four keys as above. Used by both workflows.
 **Hiccup + fix:**
 - The user-memory delete test failed once on a full-suite run: `toHaveCount(0)` on the fact text passed immediately because the `confirmDelete` mode replaces the fact text with "Delete this fact? This cannot be undone." — so the assertion succeeded *before* the server action committed to the DB. The reload then re-fetched the still-existing row and the post-reload assertion failed. Fix: assert on `[data-user-fact-id]` count instead of the text — the entire `<li>` only disappears after the action completes and revalidation re-renders. The same race in principle affects the project-memory delete test, but it has been passing reliably; left it alone (rule of "don't fix what isn't breaking").
 
-**Env additions:** none new — reuses `CRON_SECRET`, `ADMIN_USER_ID`, `E2E_TEST_MODE` from the project-memory feature. Halli still needs to add `CRON_SECRET` and `ADMIN_USER_ID` to Vercel for production cron to work.
+**Env additions:** none new — reuses `CRON_SECRET`, `ADMIN_USER_ID`, `E2E_TEST_MODE` from the project-memory feature. Halli confirmed both `CRON_SECRET` and `ADMIN_USER_ID` are already set in Vercel from the project-memory feature, so the nightly user-fact cron pass works in prod immediately on the first run after this deploy.
 
 **Next-session candidates:**
-- Wire `CRON_SECRET` + `ADMIN_USER_ID` into Vercel UI so the nightly cron actually runs in prod.
 - First Studio tool (image gen).
 - Test foundation refactor (per-worker storageState — see entry below).
 - Coverage gaps from STATUS.md.
