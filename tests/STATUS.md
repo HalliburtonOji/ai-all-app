@@ -11,6 +11,7 @@
 | Coach (Part 1) — send + receive message, message persistence, /api/coach auth check, input length validation, RLS cross-user isolation via /api/coach | 5 | 2026-04-28 | Tests run with `E2E_TEST_MODE=true`, deterministic mock responses. |
 | Coach (Part 2) — streaming, multi-thread isolation, RLS on /api/coach/stream, rename, delete, auto-title, regenerate, input lock during stream | 8 | 2026-04-29 | Mock streaming emits 4 chunks 50ms apart. Auto-title tested in mock mode. |
 | Project memory — edit fact, delete fact, pin sort-to-top, RLS cross-user, memory injection into coach system prompt, 50-fact cap enforcement, cron endpoint auth | 7 | 2026-04-29 | Mock extraction inserts a deterministic `[mock fact …]` row + runs the same cap enforcement, so end-to-end behavior is testable without calling Anthropic. The admin button is exposed to any user when `E2E_TEST_MODE=true` so tests can drive extraction without impersonating the admin. |
+| Coach suggestions tray — appears after first response, click fills input (no auto-send), no tray on empty thread, RLS cross-user on /api/coach/suggest | 4 | 2026-04-29 | Mock-mode endpoint returns 3 deterministic suggestions; production calls Sonnet 4.6. Tray renders nothing until first response (or on fresh empty thread). Click pre-fills textarea + focuses it but never auto-sends. |
 
 ## Untested by Design
 
@@ -40,6 +41,7 @@
 
 | Date | Branch | Outcome | Runtime | Where |
 |------|--------|---------|---------|-------|
+| 2026-04-29 | main | ✅ pass (34/34) | 1.9 min | local (Coach suggestions tray + cap-test data-attribute fix) |
 | 2026-04-29 | main | ✅ pass (30/30) | 1.7 min | local (Project memory feature complete) |
 | 2026-04-29 | main | ✅ pass (23/23) | ~3 min | local (Coach Part 2 complete) |
 | 2026-04-29 | main | ✅ pass (15/15) | ~5 min | CI (post Coach Part 1) |

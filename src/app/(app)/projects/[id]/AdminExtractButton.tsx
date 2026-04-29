@@ -49,6 +49,7 @@ export function AdminExtractButton({ projectId }: AdminExtractButtonProps) {
         type="button"
         onClick={handleClick}
         disabled={isPending}
+        data-extract-button="true"
         className="shrink-0 rounded-md bg-black px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
       >
         {isPending ? "Running…" : "Run extraction now"}

@@ -176,11 +176,12 @@ test.describe("Project memory", () => {
 
     // 51 mock extractions. Each inserts 1 fact; the 51st triggers cap
     // enforcement which deletes the oldest non-pinned fact.
+    // We locate by data-attribute so the locator survives the button's
+    // text flipping between "Run extraction now" and "Running…".
+    const extractBtn = page.locator('[data-extract-button="true"]');
     for (let i = 0; i < 51; i++) {
-      await page.getByRole("button", { name: "Run extraction now" }).click();
-      await expect(
-        page.getByRole("button", { name: "Run extraction now" }),
-      ).toBeEnabled({ timeout: 5_000 });
+      await extractBtn.click();
+      await expect(extractBtn).toBeEnabled({ timeout: 10_000 });
     }
 
     await page.reload();

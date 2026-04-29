@@ -271,6 +271,33 @@ Same four keys as above. Used by both workflows.
 
 > Add a new entry to the **top** of this list for each work session. Include: date, what shipped, decisions made, and anything left dangling.
 
+### 2026-04-29 (later still 4) — A1 of coach deepening: "What next" suggestions tray
+
+**Shipped:**
+- POST [src/app/api/coach/suggest/route.ts](src/app/api/coach/suggest/route.ts) — generates 2–3 short next-action suggestions for the current conversation. Auth + RLS via the same conversation-ownership check used in `/api/coach/stream`. Mock mode returns 3 deterministic fixtures (no Anthropic call).
+- Helper [src/lib/coach/build-suggestions.ts](src/lib/coach/build-suggestions.ts) — system prompt + `buildSuggestionContext` (reuses `buildProjectContext` and `buildMemoryContext` so suggestions see the same framing as the coach itself) + tolerant `parseSuggestions` (strips code fences, validates shape, silently returns `[]` on any structural failure).
+- Client component [src/app/(app)/projects/[id]/SuggestionTray.tsx](src/app/(app)/projects/[id]/SuggestionTray.tsx) — pill-style buttons, skeleton loading, refresh button, hidden when no suggestions and not loading. `data-suggestion-tray` + `data-suggestion-index` attributes for tests.
+- [src/app/(app)/projects/[id]/Coach.tsx](src/app/(app)/projects/[id]/Coach.tsx) — fetches suggestions on mount (only if thread has prior messages) and after every successful `done` SSE event. Click handler pre-fills the textarea and focuses it; never auto-sends. Tray disabled while streaming.
+- [tests/e2e/suggestions.spec.ts](tests/e2e/suggestions.spec.ts) — 4 new E2E tests. Total project E2E tests: **34**.
+- Cap-test fix in [tests/e2e/memory.spec.ts](tests/e2e/memory.spec.ts): switched the extract-button locator to `[data-extract-button="true"]` (added the attribute in [AdminExtractButton.tsx](src/app/(app)/projects/[id]/AdminExtractButton.tsx)) so the test no longer flakes when the button text flips between "Run extraction now" and "Running…".
+
+**Decisions:**
+- Sonnet 4.6 for suggestion generation (not Haiku) — same reasoning as the auto-title call: Haiku had quirky API behavior in this codebase, Sonnet is verified, ~$0.005 per call is fine for the dogfooding phase.
+- No DB persistence — suggestions are regenerated on every `done` event so they always reflect the latest context. If we ever want analytics on which suggestions get clicked, that's a small follow-up.
+- Click-to-fill, never click-to-send. Wholesome positioning constraint: the user always reviews and edits before sending.
+- Tray hidden entirely when no suggestions are available — avoids "empty tray" clutter on fresh threads.
+- Suggestion tray on Coach tab only. Memory tab and dashboards do not surface suggestions.
+
+**Hiccups + fixes:**
+- The Project-memory cap test flaked because its locator only matched "Run extraction now" while the button briefly shows "Running…" during the action. Fixed via a `data-extract-button` attribute.
+- Halli's sharp pushback: every test currently signs up a fresh user → 30+ signups per full run → Supabase rate limit kicked in after running the suite back-to-back. The full-suite "15 failed" was rate-limit, not a code bug — proven by the 4 new tests passing in isolation. Rate limit was bumped manually for now. **The fix is the storageState pattern (Playwright's standard for shared auth) — queued as the next task.**
+
+**Next-session candidates:**
+- **Test foundation refactor** — Playwright `storageState` pattern: one signed-up "test runner" user with cookies cached to `playwright/.auth/user.json`, loaded by all tests. Cross-user RLS tests still create a second fresh user. Net: ~3 signups per full run instead of ~30. **Highest leverage immediate task.**
+- **A2 — Cross-Project memory** (per the original /plan queue). Same pattern as Project memory at user level.
+- First Studio tool (image gen).
+- Coverage gaps from STATUS.md.
+
 ### 2026-04-29 (later still 3) — Project-level coach memory
 
 **Shipped:**

@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
-import type { Message } from "@/types/coach";
+import type { Message, Suggestion } from "@/types/coach";
 import { regenerateLastResponse } from "./conversation-actions";
+import { SuggestionTray } from "./SuggestionTray";
 
 interface CoachProps {
   conversationId: string;
@@ -25,10 +26,55 @@ export function Coach({ conversationId, initialMessages }: CoachProps) {
     null,
   );
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const router = useRouter();
+
+  // Fetch coach suggestions for the current conversation. Silent on errors —
+  // a failed fetch just hides the tray, never disrupts the chat.
+  const fetchSuggestions = useCallback(async () => {
+    setIsLoadingSuggestions(true);
+    try {
+      const res = await fetch("/api/coach/suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversationId }),
+      });
+      if (!res.ok) {
+        setSuggestions([]);
+        return;
+      }
+      const data = (await res.json()) as { suggestions?: Suggestion[] };
+      setSuggestions(Array.isArray(data.suggestions) ? data.suggestions : []);
+    } catch {
+      setSuggestions([]);
+    } finally {
+      setIsLoadingSuggestions(false);
+    }
+  }, [conversationId]);
+
+  // On mount: load suggestions only if the thread has prior messages.
+  useEffect(() => {
+    if (initialMessages.length > 0) {
+      void fetchSuggestions();
+    }
+  }, [fetchSuggestions, initialMessages.length]);
+
+  function handleSuggestionSelect(prompt: string) {
+    setInput(prompt);
+    setTimeout(() => {
+      textareaRef.current?.focus();
+      const len = prompt.length;
+      try {
+        textareaRef.current?.setSelectionRange(len, len);
+      } catch {
+        // Some browsers throw on setSelectionRange before the value is committed.
+      }
+    }, 0);
+  }
 
   useEffect(() => {
     scrollRef.current?.scrollTo({
@@ -151,6 +197,8 @@ export function Coach({ conversationId, initialMessages }: CoachProps) {
             if (payload.title) {
               router.refresh();
             }
+            // Refresh suggestions now that the conversation has changed.
+            void fetchSuggestions();
           } else if (eventName === "error") {
             const errPayload = parsed as {
               message?: string;
@@ -295,6 +343,14 @@ export function Coach({ conversationId, initialMessages }: CoachProps) {
           )}
         </div>
       )}
+
+      <SuggestionTray
+        suggestions={suggestions}
+        isLoading={isLoadingSuggestions}
+        disabled={isStreaming}
+        onSelect={handleSuggestionSelect}
+        onRefresh={() => void fetchSuggestions()}
+      />
 
       <form
         onSubmit={(e) => {

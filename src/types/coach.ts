@@ -10,6 +10,16 @@ export interface Conversation {
 export type MessageRole = "user" | "assistant";
 
 /**
+ * A coach-generated suggestion for the user's next action. Shown as a
+ * pill in the SuggestionTray; clicking pre-fills the chat input with
+ * `prompt`. Never auto-sent.
+ */
+export interface Suggestion {
+  label: string;
+  prompt: string;
+}
+
+/**
  * A single durable fact the coach remembers about a project.
  * Extracted nightly by the cron from recent conversations,
  * editable + deletable + pinnable by the user.
