@@ -271,6 +271,30 @@ Same four keys as above. Used by both workflows.
 
 > Add a new entry to the **top** of this list for each work session. Include: date, what shipped, decisions made, and anything left dangling.
 
+### 2026-04-29 (later still 3) — Project-level coach memory
+
+**Shipped:**
+- Migration [supabase/migrations/20260429131402_add_project_facts.sql](supabase/migrations/20260429131402_add_project_facts.sql): `project_facts` table (id, project_id, user_id, fact ≤500 chars, source_thread_id, pinned, timestamps) with RLS by `user_id = auth.uid()`. Plus `projects.project_facts_last_extracted_at` column for incremental cron.
+- **Memory tab UI** at [src/app/(app)/projects/[id]/Memory.tsx](src/app/(app)/projects/[id]/Memory.tsx) + [ProjectTabs.tsx](src/app/(app)/projects/[id]/ProjectTabs.tsx) + [FactItem.tsx](src/app/(app)/projects/[id]/FactItem.tsx). Coach/Memory tab switcher with `?tab=memory` URL state. Hover actions: edit (inline), pin/unpin, delete (with confirm). Pinned facts get amber border + sort to top. "Remembering N things" pill on the tab.
+- **Fact actions** at [src/app/(app)/projects/[id]/fact-actions.ts](src/app/(app)/projects/[id]/fact-actions.ts): updateFact, deleteFact, togglePinFact. RLS enforced.
+- **Extraction logic** at [src/lib/coach/extract-facts.ts](src/lib/coach/extract-facts.ts) — single function used by both cron and manual trigger. Loads new messages since last extraction, calls Sonnet 4.6 (Haiku had API quirks), parses JSON array, inserts as facts, runs `enforceFactCap` (drops oldest non-pinned past 50). In `E2E_TEST_MODE` inserts a deterministic mock fact + runs cap, so cap behavior is testable.
+- **Cron endpoint** at [src/app/api/cron/extract-facts/route.ts](src/app/api/cron/extract-facts/route.ts) — GET, gated by `Authorization: Bearer ${CRON_SECRET}`. Uses service-role client to scan all projects. Configured in [vercel.json](vercel.json) to fire daily at 03:00 UTC.
+- **Manual admin trigger** at [src/app/(app)/projects/[id]/AdminExtractButton.tsx](src/app/(app)/projects/[id]/AdminExtractButton.tsx) + [extraction-actions.ts](src/app/(app)/projects/[id]/extraction-actions.ts). Visible only when `user.id === ADMIN_USER_ID` (or in test mode). To remove before public signups.
+- **Memory injection** in [src/app/api/coach/stream/route.ts](src/app/api/coach/stream/route.ts) via [src/lib/coach/build-memory.ts](src/lib/coach/build-memory.ts). Facts (pinned first) appended to system prompt as "What you remember about this project". Mock response includes `[memory: N]` suffix when facts exist, so injection is testable.
+- **7 new E2E tests** in [tests/e2e/memory.spec.ts](tests/e2e/memory.spec.ts): edit, delete, pin, RLS cross-user, injection into coach prompt, 50-fact cap, cron auth. Total project E2E tests: **30 (all passing locally, 1.7 min)**.
+- New env vars: `CRON_SECRET` and `ADMIN_USER_ID`. Added to [.env.local](.env.local) automatically. Vercel + GitHub still need adding before next deploy.
+
+**Decisions:**
+- Sonnet 4.6 for extraction, not Haiku — Haiku 4.5 had API request-format friction the last time, Sonnet works reliably and the per-extraction cost is small.
+- One mock fact per `extractFactsForProject` call in test mode (rather than full no-op) so the cap enforcement path is end-to-end testable.
+- Admin button + manuallyExtractFacts both bypass the admin check when `E2E_TEST_MODE=true` so tests don't need to impersonate the admin user.
+- Memory injection is silent in the UI — no "I remembered X about you" affordance. The coach just feels smarter; calling attention to memory feels gimmicky.
+- 50-fact-per-project cap with oldest-non-pinned eviction. Pinned facts always preserved.
+
+**Hiccups + fixes:**
+- I asked Halli to manually paste SQL to seed test facts — they pushed back. Switched to skipping the manual seed and continuing the build (real extraction creates facts naturally). Saved as a binding feedback memory: skip "intermediate verification" steps that require Halli's manual input when the proper verification can happen later.
+- Halli explicitly asked Claude to act more autonomously: run commands, generate values, query APIs directly. Bound as a [memory rule](memory/feedback_take_more_action.md): pause only for browser-auth, product decisions, manual UI checks, and final go-ahead — not routine execution.
+
 ### 2026-04-29 (later still 2) — Attempted middleware → proxy rename, reverted
 
 **Tried:** Renaming `src/middleware.ts` to `src/proxy.ts` (per the Next.js 16 deprecation warning) with the `middleware` export renamed to `proxy`.

@@ -2,8 +2,9 @@ import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/utils/supabase/server";
 import { COACH_SYSTEM_PROMPT } from "@/lib/coach/system-prompt";
 import { buildProjectContext } from "@/lib/coach/build-context";
+import { buildMemoryContext } from "@/lib/coach/build-memory";
 import type { Project } from "@/types/project";
-import type { MessageRole } from "@/types/coach";
+import type { MessageRole, ProjectFact } from "@/types/coach";
 
 const MAX_MESSAGE_LENGTH = 10_000;
 const MODEL = "claude-sonnet-4-6";
@@ -95,6 +96,16 @@ export async function POST(request: Request) {
 
   let history = (historyRows ?? []) as { role: MessageRole; content: string }[];
 
+  // Load project memory facts (pinned first, then most recent).
+  const { data: factRows } = await supabase
+    .from("project_facts")
+    .select("id, fact, pinned, created_at")
+    .eq("project_id", project.id)
+    .order("pinned", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  const memoryFacts = (factRows ?? []) as ProjectFact[];
+
   if (history.length > HISTORY_TRIM_THRESHOLD) {
     const trimmedCount = history.length - HISTORY_KEEP_MOST_RECENT;
     history = history.slice(-HISTORY_KEEP_MOST_RECENT);
@@ -149,12 +160,17 @@ export async function POST(request: Request) {
       try {
         if (isMock) {
           // Deterministic mock — emits 4 chunks with small delays so streaming
-          // tests can assert visible growth, not just final text.
+          // tests can assert visible growth, not just final text. When the
+          // project has memory facts, the mock appends [memory: N] so tests
+          // can verify the injection happened.
+          const memorySuffix =
+            memoryFacts.length > 0 ? ` [memory: ${memoryFacts.length}]` : "";
           const chunks = [
             "[mock] ",
             "I received: ",
             trimmed.slice(0, 25),
             trimmed.length > 25 ? trimmed.slice(25, 50) : "",
+            memorySuffix,
           ].filter((c) => c.length > 0);
 
           for (const chunk of chunks) {
@@ -176,8 +192,12 @@ export async function POST(request: Request) {
 
           modelUsed = MODEL;
           const client = new Anthropic({ apiKey });
+          const memoryContext = buildMemoryContext(memoryFacts);
           const systemMessage =
-            COACH_SYSTEM_PROMPT + "\n\n" + buildProjectContext(project);
+            COACH_SYSTEM_PROMPT +
+            "\n\n" +
+            buildProjectContext(project) +
+            (memoryContext ? "\n\n" + memoryContext : "");
 
           const anthroStream = client.messages.stream({
             model: MODEL,

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
 import { ProjectTypeBadge } from "@/components/ProjectTypeBadge";
 import { formatDate, type Project } from "@/types/project";
-import type { Message } from "@/types/coach";
+import type { Message, ProjectFact } from "@/types/coach";
 import { toggleArchiveProject } from "../actions";
 import { EditableField } from "./EditableField";
 import { DeleteProjectButton } from "./DeleteProjectButton";
@@ -12,16 +12,19 @@ import {
   ConversationList,
   type ConversationListItem,
 } from "./ConversationList";
+import { ProjectTabs, type ProjectTab } from "./ProjectTabs";
+import { Memory } from "./Memory";
 
 export default async function ProjectDetailPage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ conversation?: string }>;
+  searchParams: Promise<{ conversation?: string; tab?: string }>;
 }) {
   const { id } = await params;
-  const { conversation: requestedConversationId } = await searchParams;
+  const { conversation: requestedConversationId, tab: requestedTab } =
+    await searchParams;
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -34,26 +37,26 @@ export default async function ProjectDetailPage({
     notFound();
   }
 
-  const project = data as Project;
+  const project = data as Project & {
+    project_facts_last_extracted_at: string | null;
+  };
   const isArchived = project.status === "archived";
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Load all conversations for this project (RLS limits this to user's own).
+  // Load conversations (always — sidebar shows on both tabs)
   const { data: conversationRows } = await supabase
     .from("conversations")
     .select("id, title, updated_at")
     .eq("project_id", project.id)
     .order("updated_at", { ascending: false });
 
-  let conversations: ConversationListItem[] = (conversationRows ?? []) as ConversationListItem[];
+  let conversations: ConversationListItem[] =
+    (conversationRows ?? []) as ConversationListItem[];
 
-  // Determine which conversation to show:
-  //   1. If ?conversation=<id> in URL and it belongs to user → that one
-  //   2. Else if user has any conversations → most recently updated
-  //   3. Else → create one and use it (first visit to a project)
+  // Determine current conversation (same logic as before)
   let currentConversationId: string | null = null;
   if (
     requestedConversationId &&
@@ -74,7 +77,7 @@ export default async function ProjectDetailPage({
     }
   }
 
-  // Load messages for the current conversation only — threads are context-independent.
+  // Load messages for the current conversation (Coach tab needs these)
   let initialMessages: Message[] = [];
   if (currentConversationId) {
     const { data: messageRows } = await supabase
@@ -84,6 +87,30 @@ export default async function ProjectDetailPage({
       .order("created_at", { ascending: true });
     initialMessages = (messageRows ?? []) as Message[];
   }
+
+  // Load project facts (always — used for tab badge + Memory tab)
+  const { data: factRows } = await supabase
+    .from("project_facts")
+    .select(
+      "id, fact, source_thread_id, pinned, created_at, updated_at",
+    )
+    .eq("project_id", project.id)
+    .order("pinned", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  const facts: ProjectFact[] = (factRows ?? []) as ProjectFact[];
+  const hasExtractedYet = project.project_facts_last_extracted_at !== null;
+  // Admin button shows for the configured admin user OR any user when
+  // E2E_TEST_MODE is on (so tests can drive extraction). Production never
+  // sets E2E_TEST_MODE, so real users never see it.
+  const isAdmin =
+    !!user &&
+    ((!!process.env.ADMIN_USER_ID && user.id === process.env.ADMIN_USER_ID) ||
+      process.env.E2E_TEST_MODE === "true");
+
+  // Determine current tab
+  const currentTab: ProjectTab =
+    requestedTab === "memory" ? "memory" : "coach";
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">
@@ -145,30 +172,44 @@ export default async function ProjectDetailPage({
       </dl>
 
       <section className="mt-8">
-        <h2 className="mb-3 text-lg font-semibold text-black dark:text-white">
-          Coach
-        </h2>
+        <ProjectTabs
+          projectId={project.id}
+          currentTab={currentTab}
+          factCount={facts.length}
+          currentConversationId={currentConversationId}
+        />
 
-        <div className="flex flex-col gap-4 md:flex-row">
-          <ConversationList
-            projectId={project.id}
-            conversations={conversations}
-            currentConversationId={currentConversationId}
-          />
-
-          <div className="flex-1 min-w-0">
-            {currentConversationId ? (
-              <Coach
-                key={currentConversationId}
-                conversationId={currentConversationId}
-                initialMessages={initialMessages}
+        <div className="mt-4">
+          {currentTab === "coach" ? (
+            <div className="flex flex-col gap-4 md:flex-row">
+              <ConversationList
+                projectId={project.id}
+                conversations={conversations}
+                currentConversationId={currentConversationId}
               />
-            ) : (
-              <p className="rounded-lg border border-dashed border-zinc-300 bg-white p-6 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-950">
-                Coach is unavailable — try refreshing the page.
-              </p>
-            )}
-          </div>
+
+              <div className="min-w-0 flex-1">
+                {currentConversationId ? (
+                  <Coach
+                    key={currentConversationId}
+                    conversationId={currentConversationId}
+                    initialMessages={initialMessages}
+                  />
+                ) : (
+                  <p className="rounded-lg border border-dashed border-zinc-300 bg-white p-6 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-950">
+                    Coach is unavailable — try refreshing the page.
+                  </p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <Memory
+              projectId={project.id}
+              facts={facts}
+              hasExtractedYet={hasExtractedYet}
+              isAdmin={isAdmin}
+            />
+          )}
         </div>
       </section>
 
