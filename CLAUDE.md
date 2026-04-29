@@ -271,6 +271,23 @@ Same four keys as above. Used by both workflows.
 
 > Add a new entry to the **top** of this list for each work session. Include: date, what shipped, decisions made, and anything left dangling.
 
+### 2026-04-29 (later still 5) — Attempted shared-auth storageState refactor, reverted
+
+**Tried:** Playwright's standard `storageState` pattern — one setup spec signs up a "test runner" user, saves auth cookies to `playwright/.auth/user.json`, all tests inherit that state. Goal: drop signups from ~30/run to ~3/run.
+
+**Result:** 6 deterministic failures every run. Specifically: tests that signed up a *fresh* user during their flow (cross-user RLS tests via `browser.newContext()`, plus the "logged-out user calling /api/coach gets 401" test which needs no auth) interacted badly with the shared session. Tests like "user can send a message" were also failing — `signUpNewUser` short-circuited successfully, but a few seconds later in the flow a goto to `/projects/new` redirected to `/login` because the shared user's auth cookies had been refreshed by another concurrent worker, invalidating ours.
+
+**Diagnosis:** Supabase's `@supabase/ssr` rotates refresh tokens on every refresh. Parallel workers all sharing the same storageState file race on refresh — when one worker refreshes, the other workers' in-memory cookies become stale, triggering middleware redirects to `/login`. This is a fundamental incompatibility with naive shared-auth-state across parallel test workers, not a code bug we can patch quickly.
+
+**Reverted to** per-test signup. Tests pass 34/34 again as before.
+
+**Future fix paths (queued for a focused future session):**
+- **Per-worker users** — each Playwright worker creates its own user via a setup test that runs once per worker. ~5 signups per full run instead of 30, no shared-state racing.
+- **Token-only state without refresh** — disable Supabase auto-refresh in tests so cookies stay stable for the test duration. Requires a config knob in `@supabase/ssr` we haven't investigated.
+- **Sequential workers** (`workers: 1` in CI) — slow but reliable.
+
+The bumped Supabase rate limit you set today (500 / 5 min) is the practical fix for now: with that, the per-test-signup pattern doesn't cause issues.
+
 ### 2026-04-29 (later still 4) — A1 of coach deepening: "What next" suggestions tray
 
 **Shipped:**
