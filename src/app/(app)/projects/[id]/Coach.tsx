@@ -1,48 +1,73 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import type { Message } from "@/types/coach";
+import { regenerateLastResponse } from "./conversation-actions";
 
 interface CoachProps {
   conversationId: string;
   initialMessages: Message[];
 }
 
+interface UIMessage extends Message {
+  /** Local-only flag set true while a stream is filling in this message. */
+  streaming?: boolean;
+}
+
 export function Coach({ conversationId, initialMessages }: CoachProps) {
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [messages, setMessages] = useState<UIMessage[]>(initialMessages);
   const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastSubmittedMessage, setLastSubmittedMessage] = useState<string | null>(
+    null,
+  );
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
     scrollRef.current?.scrollTo({
       top: scrollRef.current.scrollHeight,
       behavior: "smooth",
     });
-  }, [messages, isLoading]);
+  }, [messages, isStreaming]);
 
-  async function handleSubmit() {
-    const trimmed = input.trim();
-    if (!trimmed || isLoading) return;
+  /** Core streaming logic. Used by handleSubmit, handleRegenerate, and handleRetry. */
+  async function streamMessage(content: string) {
+    if (isStreaming) return;
+    const trimmed = content.trim();
+    if (!trimmed) return;
 
     setError(null);
-    setIsLoading(true);
+    setIsStreaming(true);
+    setLastSubmittedMessage(trimmed);
 
-    const optimisticUserMessage: Message = {
-      id: `temp-${Date.now()}`,
+    const optimisticUserId = `temp-user-${Date.now()}`;
+    const placeholderId = `streaming-${Date.now()}`;
+
+    const optimisticUser: UIMessage = {
+      id: optimisticUserId,
       role: "user",
       content: trimmed,
       created_at: new Date().toISOString(),
     };
+    const placeholderAssistant: UIMessage = {
+      id: placeholderId,
+      role: "assistant",
+      content: "",
+      created_at: new Date().toISOString(),
+      streaming: true,
+    };
 
-    setMessages((prev) => [...prev, optimisticUserMessage]);
-    setInput("");
+    setMessages((prev) => [...prev, optimisticUser, placeholderAssistant]);
 
     try {
-      const res = await fetch("/api/coach", {
+      const res = await fetch("/api/coach/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ conversationId, message: trimmed }),
@@ -50,25 +75,165 @@ export function Coach({ conversationId, initialMessages }: CoachProps) {
 
       if (!res.ok) {
         const data: unknown = await res.json().catch(() => ({}));
-        const errorText =
-          (data && typeof data === "object" && "error" in data && typeof (data as { error: unknown }).error === "string"
+        const errText =
+          data &&
+          typeof data === "object" &&
+          "error" in data &&
+          typeof (data as { error: unknown }).error === "string"
             ? (data as { error: string }).error
-            : null) ?? "Something went wrong — try again.";
-        throw new Error(errorText);
+            : "Couldn't reach the coach.";
+        throw new Error(errText);
       }
 
-      const assistant = (await res.json()) as Message;
-      setMessages((prev) => [...prev, assistant]);
+      if (!res.body) {
+        throw new Error("No response body");
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const events = buffer.split("\n\n");
+        buffer = events.pop() ?? "";
+
+        for (const ev of events) {
+          if (!ev) continue;
+          let eventName = "";
+          let dataLine = "";
+          for (const line of ev.split("\n")) {
+            if (line.startsWith("event:")) eventName = line.slice(6).trim();
+            else if (line.startsWith("data:")) dataLine = line.slice(5).trim();
+          }
+          if (!eventName || !dataLine) continue;
+
+          let parsed: unknown;
+          try {
+            parsed = JSON.parse(dataLine);
+          } catch {
+            continue;
+          }
+
+          if (eventName === "text") {
+            const delta = (parsed as { delta?: string }).delta ?? "";
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === placeholderId
+                  ? { ...m, content: m.content + delta }
+                  : m,
+              ),
+            );
+          } else if (eventName === "done") {
+            const payload = parsed as {
+              message: Message | null;
+              title?: string | null;
+            };
+            const final = payload.message;
+            if (final) {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === placeholderId
+                    ? { ...final, streaming: false }
+                    : m,
+                ),
+              );
+            } else {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === placeholderId ? { ...m, streaming: false } : m,
+                ),
+              );
+            }
+            if (payload.title) {
+              router.refresh();
+            }
+          } else if (eventName === "error") {
+            const errPayload = parsed as {
+              message?: string;
+              partial?: boolean;
+            };
+            setError(errPayload.message ?? "The coach was interrupted.");
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === placeholderId
+                  ? { ...m, streaming: false, partial: true }
+                  : m,
+              ),
+            );
+          }
+        }
+      }
     } catch (err) {
-      setError((err as Error).message);
-      setInput(trimmed);
+      const msg = (err as Error).message;
+      setError(msg);
       setMessages((prev) =>
-        prev.filter((m) => m.id !== optimisticUserMessage.id),
+        prev.filter(
+          (m) => m.id !== placeholderId && m.id !== optimisticUserId,
+        ),
       );
     } finally {
-      setIsLoading(false);
-      // Refocus the textarea after the next render cycle
+      setIsStreaming(false);
       setTimeout(() => textareaRef.current?.focus(), 0);
+    }
+  }
+
+  async function handleSubmit() {
+    const trimmed = input.trim();
+    if (!trimmed || isStreaming) return;
+    setInput("");
+    await streamMessage(trimmed);
+  }
+
+  async function handleRegenerate(assistantMessageId: string) {
+    if (isStreaming) return;
+
+    setError(null);
+    const result = await regenerateLastResponse(assistantMessageId);
+    if (!result.success) {
+      setError(result.error);
+      return;
+    }
+
+    // Trim local state: drop the assistant message + the user message that preceded it.
+    setMessages((prev) => {
+      const asstIdx = prev.findIndex((m) => m.id === assistantMessageId);
+      if (asstIdx === -1) return prev;
+      let userIdx = asstIdx - 1;
+      while (userIdx >= 0 && prev[userIdx].role !== "user") userIdx--;
+      return userIdx >= 0 ? prev.slice(0, userIdx) : prev.slice(0, asstIdx);
+    });
+
+    await streamMessage(result.userMessageContent);
+  }
+
+  async function handleRetry() {
+    if (isStreaming) return;
+    if (!lastSubmittedMessage) {
+      // Fall back to whatever's in the input
+      const trimmed = input.trim();
+      if (trimmed) {
+        setInput("");
+        await streamMessage(trimmed);
+      }
+      return;
+    }
+    await streamMessage(lastSubmittedMessage);
+  }
+
+  async function handleCopy(messageId: string, content: string) {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopiedMessageId(messageId);
+      setTimeout(
+        () => setCopiedMessageId((id) => (id === messageId ? null : id)),
+        1500,
+      );
+    } catch {
+      // Clipboard may be blocked; do nothing — Copy is best-effort.
     }
   }
 
@@ -89,31 +254,45 @@ export function Coach({ conversationId, initialMessages }: CoachProps) {
         className="flex-1 overflow-y-auto p-4"
         style={{ minHeight: "400px", maxHeight: "60vh" }}
       >
-        {messages.length === 0 && !isLoading ? (
+        {messages.length === 0 && !isStreaming ? (
           <div className="flex h-full min-h-[300px] items-center justify-center px-6 text-center">
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              Ready when you are. What are you working on?
+            <p className="text-sm italic text-zinc-500 dark:text-zinc-400">
+              Ready when you are. What&apos;s on your mind?
             </p>
           </div>
         ) : (
           <div className="space-y-3">
             {messages.map((m) => (
-              <MessageBubble key={m.id} message={m} />
+              <MessageBubble
+                key={m.id}
+                message={m}
+                isCopied={copiedMessageId === m.id}
+                onCopy={() => handleCopy(m.id, m.content)}
+                onRegenerate={
+                  m.role === "assistant" && !m.streaming
+                    ? () => handleRegenerate(m.id)
+                    : undefined
+                }
+                disableActions={isStreaming}
+              />
             ))}
-            {isLoading && (
-              <div className="flex justify-start">
-                <div className="rounded-md bg-zinc-100 px-3 py-2 text-sm text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400">
-                  Coach is thinking…
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>
 
       {error && (
-        <div className="border-t border-red-500/30 bg-red-500/10 px-4 py-2 text-sm text-red-700 dark:text-red-400">
-          {error}
+        <div className="flex items-start justify-between gap-3 border-t border-red-500/30 bg-red-500/10 px-4 py-2 text-sm text-red-700 dark:text-red-400">
+          <span className="flex-1">{error}</span>
+          {lastSubmittedMessage && (
+            <button
+              type="button"
+              onClick={() => void handleRetry()}
+              disabled={isStreaming}
+              className="shrink-0 rounded border border-red-500/40 bg-white px-2 py-0.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:bg-zinc-950 dark:text-red-400 dark:hover:bg-red-950/30"
+            >
+              Retry
+            </button>
+          )}
         </div>
       )}
 
@@ -130,7 +309,7 @@ export function Coach({ conversationId, initialMessages }: CoachProps) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            disabled={isLoading}
+            disabled={isStreaming}
             placeholder="Ask the coach anything…"
             rows={2}
             aria-label="Message to coach"
@@ -138,7 +317,7 @@ export function Coach({ conversationId, initialMessages }: CoachProps) {
           />
           <button
             type="submit"
-            disabled={isLoading || !input.trim()}
+            disabled={isStreaming || !input.trim()}
             className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
           >
             Send
@@ -152,8 +331,26 @@ export function Coach({ conversationId, initialMessages }: CoachProps) {
   );
 }
 
-function MessageBubble({ message }: { message: Message }) {
+interface MessageBubbleProps {
+  message: UIMessage;
+  isCopied: boolean;
+  onCopy: () => void;
+  onRegenerate?: () => void;
+  disableActions: boolean;
+}
+
+function MessageBubble({
+  message,
+  isCopied,
+  onCopy,
+  onRegenerate,
+  disableActions,
+}: MessageBubbleProps) {
   const isUser = message.role === "user";
+  const isStreaming = message.streaming === true;
+  const isPartial = message.partial === true;
+  const isEmpty = message.content.trim().length === 0;
+
   const timestamp = new Date(message.created_at).toLocaleString("en-US", {
     month: "short",
     day: "numeric",
@@ -161,8 +358,16 @@ function MessageBubble({ message }: { message: Message }) {
     minute: "2-digit",
   });
 
+  // Hide actions while this specific message is streaming OR while it's empty.
+  const showActions = !isStreaming && !isEmpty;
+
   return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+    <div
+      className={`group flex ${isUser ? "justify-end" : "justify-start"}`}
+      data-message-role={message.role}
+      data-streaming={isStreaming ? "true" : "false"}
+      data-partial={isPartial ? "true" : "false"}
+    >
       <div
         className={`max-w-[85%] rounded-lg px-3 py-2 text-sm sm:max-w-[75%] ${
           isUser
@@ -171,9 +376,64 @@ function MessageBubble({ message }: { message: Message }) {
         }`}
         title={timestamp}
       >
-        {isUser ? message.content : <CoachMarkdown content={message.content} />}
+        {isUser ? (
+          message.content
+        ) : isStreaming && isEmpty ? (
+          <span className="italic text-zinc-500">Coach is thinking…</span>
+        ) : (
+          <>
+            <CoachMarkdown content={message.content} />
+            {isStreaming && <StreamingCursor />}
+          </>
+        )}
+
+        {isPartial && !isStreaming && (
+          <p className="mt-2 text-xs italic opacity-70">
+            Response was interrupted.
+          </p>
+        )}
+
+        {showActions && (
+          <div
+            className={`mt-2 flex items-center gap-2 text-xs transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100 ${
+              isUser
+                ? "text-zinc-300 dark:text-zinc-600"
+                : "text-zinc-500"
+            }`}
+          >
+            <button
+              type="button"
+              onClick={onCopy}
+              disabled={disableActions}
+              className="rounded px-1.5 py-0.5 hover:bg-black/10 disabled:opacity-50 dark:hover:bg-white/10"
+              aria-label="Copy message"
+            >
+              {isCopied ? "Copied!" : "Copy"}
+            </button>
+            {onRegenerate && (
+              <button
+                type="button"
+                onClick={onRegenerate}
+                disabled={disableActions}
+                className="rounded px-1.5 py-0.5 hover:bg-black/10 disabled:opacity-50 dark:hover:bg-white/10"
+                aria-label="Regenerate response"
+              >
+                Regenerate
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
+  );
+}
+
+function StreamingCursor() {
+  return (
+    <span
+      aria-hidden="true"
+      className="ml-0.5 inline-block h-3 w-1.5 animate-pulse rounded-sm bg-current align-middle"
+    />
   );
 }
 

@@ -124,3 +124,318 @@ test.describe("Coach", () => {
     await ctxB.close();
   });
 });
+
+test.describe("Coach Part 2 — streaming + multi-thread", () => {
+  test("response streams in (data-streaming flips true → false)", async ({
+    page,
+  }) => {
+    await signUpNewUser(page);
+    await createProject(page, { name: "Streaming test", type: "channel" });
+
+    await page
+      .getByPlaceholder(COACH_PLACEHOLDER)
+      .fill("test stream please");
+    await page.getByRole("button", { name: "Send", exact: true }).click();
+
+    // While the stream is in progress, an assistant bubble with
+    // data-streaming="true" must exist in the DOM. That proves the
+    // SSE consumer is observing the stream's open state, not just the
+    // final result.
+    const streamingBubble = page.locator(
+      '[data-message-role="assistant"][data-streaming="true"]',
+    );
+    await expect(streamingBubble).toHaveCount(1, { timeout: 5_000 });
+
+    // Stream eventually ends — the streaming-true bubble disappears.
+    await expect(streamingBubble).toHaveCount(0, { timeout: 15_000 });
+
+    // Final mocked content is visible.
+    await expect(
+      page
+        .getByText(/\[mock\] I received: test stream please/)
+        .first(),
+    ).toBeVisible();
+  });
+
+  test("threads have independent message histories", async ({ page }) => {
+    await signUpNewUser(page);
+    await createProject(page, {
+      name: "Multi-thread test",
+      type: "exploration",
+    });
+
+    // Capture thread A's id (auto-created on first project visit).
+    const conversationAId = await page
+      .locator("[data-conversation-id]")
+      .first()
+      .getAttribute("data-conversation-id");
+    expect(conversationAId).toBeTruthy();
+
+    // Send in A
+    await page
+      .getByPlaceholder(COACH_PLACEHOLDER)
+      .fill("Alpha message in thread A");
+    await page.getByRole("button", { name: "Send", exact: true }).click();
+    await expect(
+      page.getByText(/\[mock\] I received: Alpha message in thread A/),
+    ).toBeVisible({ timeout: 10_000 });
+
+    // Create thread B
+    await page
+      .getByRole("button", { name: "+ New conversation" })
+      .first()
+      .click();
+    await page.waitForURL(/\?conversation=[a-f0-9-]+/);
+    const conversationBId = await page
+      .locator("[data-conversation-id]")
+      .first()
+      .getAttribute("data-conversation-id");
+    expect(conversationBId).toBeTruthy();
+    expect(conversationBId).not.toBe(conversationAId);
+
+    // Empty state in B
+    await expect(
+      page.getByText(/Ready when you are\. What's on your mind\?/),
+    ).toBeVisible();
+
+    // Send in B
+    await page
+      .getByPlaceholder(COACH_PLACEHOLDER)
+      .fill("Beta message in thread B");
+    await page.getByRole("button", { name: "Send", exact: true }).click();
+    await expect(
+      page.getByText(/\[mock\] I received: Beta message in thread B/),
+    ).toBeVisible({ timeout: 10_000 });
+
+    // Alpha not visible in B's history
+    await expect(page.getByText("Alpha message in thread A")).toHaveCount(0);
+
+    // Switch back to A via sidebar link
+    await page
+      .locator(`a[href*="conversation=${conversationAId}"]`)
+      .first()
+      .click();
+    await page.waitForURL(new RegExp(`conversation=${conversationAId}`));
+
+    // A's content visible, B's not
+    await expect(
+      page.getByText("Alpha message in thread A").first(),
+    ).toBeVisible();
+    await expect(page.getByText("Beta message in thread B")).toHaveCount(0);
+  });
+
+  test("RLS: User B cannot post to User A's thread via /api/coach/stream", async ({
+    browser,
+  }) => {
+    const ctxA = await browser.newContext();
+    const pageA = await ctxA.newPage();
+    await signUpNewUser(pageA);
+    await createProject(pageA, {
+      name: "Stream RLS test",
+      type: "channel",
+    });
+
+    const conversationIdA = await pageA
+      .locator("[data-conversation-id]")
+      .first()
+      .getAttribute("data-conversation-id");
+    expect(conversationIdA).toBeTruthy();
+    await ctxA.close();
+
+    const ctxB = await browser.newContext();
+    const pageB = await ctxB.newPage();
+    await signUpNewUser(pageB);
+
+    const res = await pageB.request.post("/api/coach/stream", {
+      data: {
+        conversationId: conversationIdA,
+        message: "intrusion attempt via stream",
+      },
+    });
+    expect(res.status()).toBe(404);
+
+    await ctxB.close();
+  });
+
+  test("rename thread persists across refresh", async ({ page }) => {
+    await signUpNewUser(page);
+    await createProject(page, { name: "Rename test", type: "exploration" });
+
+    // Send a message so the conversation has content (and an auto-title)
+    await page.getByPlaceholder(COACH_PLACEHOLDER).fill("hello rename");
+    await page.getByRole("button", { name: "Send", exact: true }).click();
+    await expect(
+      page.getByText(/\[mock\] I received: hello rename/),
+    ).toBeVisible({ timeout: 10_000 });
+
+    // Click Rename in the sidebar item
+    await page
+      .getByRole("button", { name: "Rename conversation" })
+      .first()
+      .click();
+
+    // Edit the title and submit via Enter
+    const titleInput = page.getByRole("textbox", {
+      name: "New conversation title",
+    });
+    await expect(titleInput).toBeVisible();
+    await titleInput.fill("My Custom Title");
+    await titleInput.press("Enter");
+
+    // New title visible in sidebar
+    await expect(page.getByText("My Custom Title").first()).toBeVisible({
+      timeout: 5_000,
+    });
+
+    // Persist across reload
+    await page.reload();
+    await expect(page.getByText("My Custom Title").first()).toBeVisible();
+  });
+
+  test("delete thread removes it from the sidebar", async ({ page }) => {
+    await signUpNewUser(page);
+    await createProject(page, { name: "Delete test", type: "sandbox" });
+
+    // Title the auto-created conversation by sending a message.
+    await page.getByPlaceholder(COACH_PLACEHOLDER).fill("first thread");
+    await page.getByRole("button", { name: "Send", exact: true }).click();
+    await expect(
+      page.getByText(/\[mock\] I received: first thread/),
+    ).toBeVisible({ timeout: 10_000 });
+
+    // Create thread B
+    await page
+      .getByRole("button", { name: "+ New conversation" })
+      .first()
+      .click();
+    await page.waitForURL(/\?conversation=/);
+
+    // Send in B
+    await page.getByPlaceholder(COACH_PLACEHOLDER).fill("second thread");
+    await page.getByRole("button", { name: "Send", exact: true }).click();
+    await expect(
+      page.getByText(/\[mock\] I received: second thread/),
+    ).toBeVisible({ timeout: 10_000 });
+
+    // Delete the current thread (B)
+    await page
+      .getByRole("button", { name: "Delete conversation" })
+      .first()
+      .click();
+    await page.getByRole("button", { name: "Yes, delete", exact: true }).click();
+
+    // After deletion, the page redirects to /projects/<id> and lands on A.
+    await page.waitForURL(/\/projects\/[a-f0-9-]+(\?|$)/);
+
+    // B's content is gone; A's content is visible.
+    await expect(page.getByText("second thread")).toHaveCount(0);
+    await expect(page.getByText("first thread").first()).toBeVisible({
+      timeout: 5_000,
+    });
+  });
+
+  test("auto-title fires after first message in a new thread", async ({
+    page,
+  }) => {
+    await signUpNewUser(page);
+    await createProject(page, { name: "Auto-title test", type: "channel" });
+
+    // Initially the auto-created conversation shows the default title.
+    // We match by the link's accessible name to avoid colliding with
+    // the "+ New conversation" button text.
+    await expect(
+      page.getByRole("link", { name: /^New conversation/ }).first(),
+    ).toBeVisible();
+
+    // Send a first message — mock auto-title becomes "Mock: <first 3 words>".
+    await page
+      .getByPlaceholder(COACH_PLACEHOLDER)
+      .fill("brainstorm channel ideas for me");
+    await page.getByRole("button", { name: "Send", exact: true }).click();
+
+    await expect(
+      page.getByText(
+        /\[mock\] I received: brainstorm channel ideas for me/,
+      ),
+    ).toBeVisible({ timeout: 10_000 });
+
+    // After the stream completes, the sidebar title updates to the mock auto-title.
+    await expect(
+      page.getByText(/Mock: brainstorm channel ideas/).first(),
+    ).toBeVisible({ timeout: 8_000 });
+  });
+
+  test("regenerate replaces the assistant response (no duplicate turns)", async ({
+    page,
+  }) => {
+    await signUpNewUser(page);
+    await createProject(page, { name: "Regenerate test", type: "channel" });
+
+    await page
+      .getByPlaceholder(COACH_PLACEHOLDER)
+      .fill("hello regenerate me");
+    await page.getByRole("button", { name: "Send", exact: true }).click();
+    await expect(
+      page.getByText(/\[mock\] I received: hello regenerate me/),
+    ).toBeVisible({ timeout: 10_000 });
+
+    // Initial state: 1 user + 1 assistant.
+    await expect(
+      page.locator('[data-message-role="user"]'),
+    ).toHaveCount(1);
+    await expect(
+      page.locator('[data-message-role="assistant"]'),
+    ).toHaveCount(1);
+
+    // Click Regenerate on the assistant message.
+    await page
+      .getByRole("button", { name: "Regenerate response" })
+      .first()
+      .click();
+
+    // After regeneration the stream replays. We end up with exactly 1 user + 1 assistant
+    // (the previous turn was deleted from the DB by regenerateLastResponse).
+    const streamingBubble = page.locator(
+      '[data-message-role="assistant"][data-streaming="true"]',
+    );
+    await expect(streamingBubble).toHaveCount(0, { timeout: 15_000 });
+    await expect(
+      page.getByText(/\[mock\] I received: hello regenerate me/),
+    ).toBeVisible();
+    await expect(
+      page.locator('[data-message-role="user"]'),
+    ).toHaveCount(1);
+    await expect(
+      page.locator('[data-message-role="assistant"]'),
+    ).toHaveCount(1);
+
+    // Refresh — DB also reflects exactly 1 turn.
+    await page.reload();
+    await expect(
+      page.locator('[data-message-role="user"]'),
+    ).toHaveCount(1);
+    await expect(
+      page.locator('[data-message-role="assistant"]'),
+    ).toHaveCount(1);
+  });
+
+  test("input is disabled while a stream is in progress", async ({ page }) => {
+    await signUpNewUser(page);
+    await createProject(page, { name: "Input disable test", type: "channel" });
+
+    const textarea = page.getByPlaceholder(COACH_PLACEHOLDER);
+    await expect(textarea).toBeEnabled();
+
+    await textarea.fill("disable check");
+    await page.getByRole("button", { name: "Send", exact: true }).click();
+
+    // Disabled while streaming.
+    await expect(textarea).toBeDisabled();
+
+    // Wait for stream to complete and verify re-enabled.
+    await expect(
+      page.getByText(/\[mock\] I received: disable check/),
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(textarea).toBeEnabled();
+  });
+});

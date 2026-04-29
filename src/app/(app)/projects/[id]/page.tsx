@@ -8,13 +8,20 @@ import { toggleArchiveProject } from "../actions";
 import { EditableField } from "./EditableField";
 import { DeleteProjectButton } from "./DeleteProjectButton";
 import { Coach } from "./Coach";
+import {
+  ConversationList,
+  type ConversationListItem,
+} from "./ConversationList";
 
 export default async function ProjectDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ conversation?: string }>;
 }) {
   const { id } = await params;
+  const { conversation: requestedConversationId } = await searchParams;
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -30,49 +37,56 @@ export default async function ProjectDetailPage({
   const project = data as Project;
   const isArchived = project.status === "archived";
 
-  // Auth — middleware already redirected logged-out users, but we need
-  // user.id below for the conversation lookup.
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Find or create the project's coach conversation. Spec is one
-  // conversation per project for now.
-  let conversationId: string | null = null;
-  if (user) {
-    const { data: existing } = await supabase
-      .from("conversations")
-      .select("id")
-      .eq("project_id", project.id)
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
+  // Load all conversations for this project (RLS limits this to user's own).
+  const { data: conversationRows } = await supabase
+    .from("conversations")
+    .select("id, title, updated_at")
+    .eq("project_id", project.id)
+    .order("updated_at", { ascending: false });
 
-    if (existing) {
-      conversationId = existing.id;
-    } else {
-      const { data: created } = await supabase
-        .from("conversations")
-        .insert({ project_id: project.id, user_id: user.id })
-        .select("id")
-        .single();
-      conversationId = created?.id ?? null;
+  let conversations: ConversationListItem[] = (conversationRows ?? []) as ConversationListItem[];
+
+  // Determine which conversation to show:
+  //   1. If ?conversation=<id> in URL and it belongs to user → that one
+  //   2. Else if user has any conversations → most recently updated
+  //   3. Else → create one and use it (first visit to a project)
+  let currentConversationId: string | null = null;
+  if (
+    requestedConversationId &&
+    conversations.some((c) => c.id === requestedConversationId)
+  ) {
+    currentConversationId = requestedConversationId;
+  } else if (conversations.length > 0) {
+    currentConversationId = conversations[0].id;
+  } else if (user) {
+    const { data: newConversation } = await supabase
+      .from("conversations")
+      .insert({ project_id: project.id, user_id: user.id })
+      .select("id, title, updated_at")
+      .single();
+    if (newConversation) {
+      currentConversationId = newConversation.id;
+      conversations = [newConversation as ConversationListItem];
     }
   }
 
-  // Load message history for the conversation
+  // Load messages for the current conversation only — threads are context-independent.
   let initialMessages: Message[] = [];
-  if (conversationId) {
+  if (currentConversationId) {
     const { data: messageRows } = await supabase
       .from("messages")
-      .select("id, role, content, created_at")
-      .eq("conversation_id", conversationId)
+      .select("id, role, content, partial, created_at")
+      .eq("conversation_id", currentConversationId)
       .order("created_at", { ascending: true });
     initialMessages = (messageRows ?? []) as Message[];
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6">
+    <main className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">
       <Link
         href="/projects"
         className="text-sm text-zinc-600 underline-offset-4 hover:underline dark:text-zinc-400"
@@ -130,21 +144,33 @@ export default async function ProjectDetailPage({
         </div>
       </dl>
 
-      <div className="mt-8">
+      <section className="mt-8">
         <h2 className="mb-3 text-lg font-semibold text-black dark:text-white">
           Coach
         </h2>
-        {conversationId ? (
-          <Coach
-            conversationId={conversationId}
-            initialMessages={initialMessages}
+
+        <div className="flex flex-col gap-4 md:flex-row">
+          <ConversationList
+            projectId={project.id}
+            conversations={conversations}
+            currentConversationId={currentConversationId}
           />
-        ) : (
-          <p className="rounded-lg border border-dashed border-zinc-300 bg-white p-6 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-950">
-            Coach is unavailable — try refreshing the page.
-          </p>
-        )}
-      </div>
+
+          <div className="flex-1 min-w-0">
+            {currentConversationId ? (
+              <Coach
+                key={currentConversationId}
+                conversationId={currentConversationId}
+                initialMessages={initialMessages}
+              />
+            ) : (
+              <p className="rounded-lg border border-dashed border-zinc-300 bg-white p-6 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-950">
+                Coach is unavailable — try refreshing the page.
+              </p>
+            )}
+          </div>
+        </div>
+      </section>
 
       <div className="mt-10 flex flex-wrap items-start gap-3 border-t border-zinc-200 pt-6 dark:border-zinc-800">
         <form action={toggleArchiveProject}>

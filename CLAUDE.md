@@ -271,6 +271,59 @@ Same four keys as above. Used by both workflows.
 
 > Add a new entry to the **top** of this list for each work session. Include: date, what shipped, decisions made, and anything left dangling.
 
+### 2026-04-29 (later) — Coach Part 2: streaming, multi-thread, polish
+
+**Shipped:**
+- **Streaming endpoint** at [src/app/api/coach/stream/route.ts](src/app/api/coach/stream/route.ts). POST that returns Server-Sent Events (`event: text` deltas, `event: done` at end with the persisted message + auto-generated title, `event: error` on mid-stream failure). The original [src/app/api/coach/route.ts](src/app/api/coach/route.ts) is kept as a non-streaming fallback. Mock mode emits 4 chunks 50ms apart so streaming tests are deterministic.
+- **History trimming** in the streaming route: when message history > 50, keep most recent 40, log `[coach] Trimmed N oldest messages…`.
+- **`partial` boolean column on `messages`** via [supabase/migrations/20260429005707_add_partial_to_messages.sql](supabase/migrations/20260429005707_add_partial_to_messages.sql). Set true when a stream is interrupted; UI surfaces "Response was interrupted." underneath the bubble.
+- **Multi-thread sidebar** at [src/app/(app)/projects/[id]/ConversationList.tsx](src/app/(app)/projects/[id]/ConversationList.tsx) + per-row [src/app/(app)/projects/[id]/ConversationItem.tsx](src/app/(app)/projects/[id]/ConversationItem.tsx). Shows all conversations for the project, hover menu with Rename + Delete, "+ New conversation" button. Mobile: collapses to a `<details>` element.
+- **URL-state for current thread**: `/projects/[id]?conversation=<id>`. Server-side picks current thread by URL param, falls back to most recent, auto-creates if zero exist.
+- **Server actions** for conversation lifecycle in [src/app/(app)/projects/[id]/conversation-actions.ts](src/app/(app)/projects/[id]/conversation-actions.ts): `createConversation`, `renameConversation`, `deleteConversation`, `regenerateLastResponse`.
+- **Auto-titling** — first user/assistant exchange in a default-titled conversation triggers a Sonnet 4.6 call (Haiku 4.5 wasn't available on the account; Sonnet works fine and the cost difference for ~50 output tokens is negligible). Title is sent in the `done` SSE event so the client can `router.refresh()` the sidebar.
+- **Per-message Copy + Regenerate** actions in [src/app/(app)/projects/[id]/Coach.tsx](src/app/(app)/projects/[id]/Coach.tsx). Copy uses `navigator.clipboard.writeText`. Regenerate calls the server action to delete the assistant message + the user message that preceded it, then re-fires the stream with the captured user content.
+- **Inline error banner with Retry button** when a stream fails. Retry re-streams using `lastSubmittedMessage`.
+- **Streaming UI** — placeholder assistant bubble inserted on submit, `data-streaming="true"` attribute while filling, pulsing cursor at end of in-progress text, "Coach is thinking…" placeholder while no chunks have arrived yet, input disabled the entire time.
+- **Empty state copy** updated to "Ready when you are. What's on your mind?"
+- **8 new E2E tests** in [tests/e2e/coach.spec.ts](tests/e2e/coach.spec.ts) covering streaming, multi-thread isolation, /api/coach/stream RLS, rename, delete, auto-title, regenerate, and input-lock-during-stream. Total coach tests: 13. Total project E2E tests: 23.
+- [tests/STATUS.md](tests/STATUS.md) updated.
+
+**Decisions:**
+- One thread per conversation (the schema already supported many; we just surfaced it). No per-thread system prompt overrides yet — that's deferred to Project-level memory in weeks 5–6.
+- Auto-title uses Sonnet, not Haiku. Reason: Haiku 4.5 model string `claude-haiku-4-5-20251001` returned 400 errors ("This model does not support assistant message prefill") and the simpler workaround was to switch model rather than restructure the prompt twice. Cost difference: ~$0.0001 per title.
+- Regenerate deletes the user message AND the assistant response, then re-streams. Alternative would have been to keep the user message and only delete the assistant — but that requires a "regenerate mode" parameter on the streaming endpoint, which complicates the API. The current design keeps a single endpoint shape.
+- Streaming route preserves the user message in DB *before* streaming starts — so a network failure mid-stream doesn't lose the user's text. Partial assistant content is saved with `partial=true`.
+
+**Hiccups + fixes:**
+- Auto-title initially failed silently because Anthropic refused the messages-array structure: `"This model does not support assistant message prefill. The conversation must end with a user message."` Fix: collapse the user/assistant exchange into a single user-role prompt that asks for the title.
+- Next.js 16 deprecation warning: `"middleware" file convention is deprecated. Please use "proxy" instead.` Acknowledged; not yet renamed. Small follow-up task.
+
+**Next-session candidates:**
+- **Rename `src/middleware.ts` → `src/proxy.ts`** to clear the Next.js 16 deprecation warning. Single rename + import path update.
+- **Project-level coach memory** (weeks 5–6 of MVP plan).
+- First Studio tool (image gen or copy drafter).
+- Custom domain.
+- Coverage gaps from [tests/STATUS.md](tests/STATUS.md): archive/unarchive, mobile viewport project, description editing, partial-stream Anthropic failure path.
+
+### 2026-04-29 — Smoke false-positive fix + signup UX tightening
+
+**Shipped:**
+- `signup` server action now detects whether `data.session` is returned by Supabase (i.e. email confirmation OFF) and redirects directly to `/dashboard` in that case. When confirmation is ON, behavior unchanged: `/login?message=Check your email…`. See [src/app/auth/actions.ts](src/app/auth/actions.ts).
+- `signUpNewUser` test helper updated to wait for either `/dashboard` or `/login` after signup and branch — same helper now works in both confirmation modes. [tests/e2e/helpers/auth.ts](tests/e2e/helpers/auth.ts).
+- Smoke tester's `report_issue` tool description tightened: declaring `critical` now requires at least one alternate verification check (direct navigation, retry) to confirm the failure isn't transient or a misread. See [scripts/smoke-test.ts](scripts/smoke-test.ts).
+
+**Hiccups + fixes:**
+- Production smoke test reported a critical false-positive: after signup, the user landed on `/login` with a "Check your email to confirm your account" banner *even though confirmation was off and a session was already established*. Claude saw the banner, declared login broken, never tried `/dashboard` directly until later (where it then noticed the user was actually logged in). Fix above resolves both the misleading UX and the smoke tester's hair-trigger.
+
+**Dangling:**
+- None for this arc. Auth + Projects + Coach v1 + tests + CI + smoke + schema-as-code all in place.
+
+**Next-session candidates:**
+- Coach Part 2: streaming responses, multiple conversations per project, Project-level memory.
+- First Studio tool (image gen or email/copy drafter — leans toward image gen as a higher-impact "I made this!" moment for users).
+- Custom domain.
+- Coverage gaps from [tests/STATUS.md](tests/STATUS.md) (archive/unarchive, mobile viewport, description editing).
+
 ### 2026-04-28 — AI Coach v1 + tightening the test pipeline
 
 **Shipped:**

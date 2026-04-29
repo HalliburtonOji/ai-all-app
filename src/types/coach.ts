@@ -17,5 +17,11 @@ export interface Message {
   model?: string | null;
   input_tokens?: number | null;
   output_tokens?: number | null;
+  /**
+   * True if this assistant message's stream was interrupted before
+   * completing. Server marks it on partial saves; client uses this to
+   * show a "retry?" affordance.
+   */
+  partial?: boolean;
   created_at: string;
 }
