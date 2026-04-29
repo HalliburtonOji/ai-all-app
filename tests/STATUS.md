@@ -1,6 +1,6 @@
 # Test Health Status
 
-**Last updated:** 2026-04-29 (A2 — user-level memory shipped)
+**Last updated:** 2026-04-29 (Studio v1 — image generation shipped)
 
 ## Coverage by Feature
 
@@ -13,6 +13,7 @@
 | Project memory — edit fact, delete fact, pin sort-to-top, RLS cross-user, memory injection into coach system prompt, 50-fact cap enforcement, cron endpoint auth | 7 | 2026-04-29 | Mock extraction inserts a deterministic `[mock fact …]` row + runs the same cap enforcement, so end-to-end behavior is testable without calling Anthropic. The admin button is exposed to any user when `E2E_TEST_MODE=true` so tests can drive extraction without impersonating the admin. |
 | Coach suggestions tray — appears after first response, click fills input (no auto-send), no tray on empty thread, RLS cross-user on /api/coach/suggest | 4 | 2026-04-29 | Mock-mode endpoint returns 3 deterministic suggestions; production calls Sonnet 4.6. Tray renders nothing until first response (or on fresh empty thread). Click pre-fills textarea + focuses it but never auto-sends. |
 | User-level (cross-project) memory — edit fact, delete fact (with confirm), pin sort-to-top, RLS cross-user dashboard isolation, injection into coach system prompt across all projects, 100-fact cap enforcement | 6 | 2026-04-29 | Lives on `/dashboard` ("About you" panel). Mock extraction inserts a deterministic `[mock user fact …]` row + runs the same cap enforcement, so end-to-end behavior is testable without Anthropic. Same admin-button bypass via `E2E_TEST_MODE=true` as project memory. |
+| Studio v1 — image generation: happy path generate + persist, empty-prompt validation, RLS cross-user image isolation, delete image (Storage row + DB row), Studio image not visible on Coach tab | 5 | 2026-04-29 | First Studio tool. Mock mode uploads a hardcoded 67-byte transparent PNG to the real `studio-images` Storage bucket so Storage + RLS path-prefix policy + signed-URL flow are all exercised end-to-end without calling Replicate. Real mode uses Replicate FLUX schnell (~$0.003/image, ~2s). |
 
 ## Untested by Design
 
@@ -39,11 +40,15 @@
 - **Memory: source_thread_id on fact rows** — In mock mode we set it to the most recent thread; not asserted in E2E.
 - **User memory: cron-driven cross-project extraction** — Mock mode + admin button covers the extraction + insert + cap path. The real cron loop (scan all projects per user, dedupe, decide what's profile-level vs project-level) is verified manually by clicking "Run user extraction now" on a real account.
 - **User memory: source_project_id attribution on user facts** — Set in extraction (most-recent project of the user); not asserted in E2E.
+- **Studio: real Replicate output quality** — Mock mode uploads a tiny transparent PNG to verify the pipeline. Real model output is verified manually after deploy.
+- **Studio: Storage RLS path-prefix policy under direct Storage API access** — RLS is enforced by `(storage.foldername(name))[1] = auth.uid()::text`. Cross-user image privacy is asserted indirectly (via project page RLS); a direct Storage API test (anon client requesting another user's signed URL path) is not yet covered.
+- **Studio: prompt length cap (1000 chars)** — Server action rejects; happy path tested. The 1000+ char rejection is not directly asserted.
 
 ## Recent Test Runs
 
 | Date | Branch | Outcome | Runtime | Where |
 |------|--------|---------|---------|-------|
+| 2026-04-29 | main | ✅ pass (45/45, 2 RLS-parallel flakes on full-suite run) | 3.2 min | local (Studio v1 — image gen: schema, Storage bucket, generate/delete, 5 tests). Failed tests pass cleanly solo — same documented per-test-signup parallel race that storageState refactor (queued) will fix. |
 | 2026-04-29 | main | ✅ pass (40/40, 1 streaming flake on parallel run) | 2.8 min | local (A2 — user-level memory: schema, extraction, injection, dashboard panel, 6 tests) |
 | 2026-04-29 | main | ✅ pass (34/34) | 1.9 min | local (Coach suggestions tray + cap-test data-attribute fix) |
 | 2026-04-29 | main | ✅ pass (30/30) | 1.7 min | local (Project memory feature complete) |

@@ -14,6 +14,8 @@ import {
 } from "./ConversationList";
 import { ProjectTabs, type ProjectTab } from "./ProjectTabs";
 import { Memory } from "./Memory";
+import { Studio } from "./Studio";
+import type { StudioImage } from "@/types/studio";
 
 export default async function ProjectDetailPage({
   params,
@@ -110,7 +112,30 @@ export default async function ProjectDetailPage({
 
   // Determine current tab
   const currentTab: ProjectTab =
-    requestedTab === "memory" ? "memory" : "coach";
+    requestedTab === "memory"
+      ? "memory"
+      : requestedTab === "studio"
+        ? "studio"
+        : "coach";
+
+  // Load studio images (always — used for tab badge + Studio tab gallery)
+  const { data: imageRows } = await supabase
+    .from("studio_images")
+    .select("id, project_id, prompt, storage_path, model, created_at")
+    .eq("project_id", project.id)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  const studioImages: StudioImage[] = await Promise.all(
+    ((imageRows ?? []) as Array<Omit<StudioImage, "signed_url">>).map(
+      async (row) => {
+        const { data: signed } = await supabase.storage
+          .from("studio-images")
+          .createSignedUrl(row.storage_path, 60 * 60);
+        return { ...row, signed_url: signed?.signedUrl ?? "" };
+      },
+    ),
+  );
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">
@@ -176,6 +201,7 @@ export default async function ProjectDetailPage({
           projectId={project.id}
           currentTab={currentTab}
           factCount={facts.length}
+          imageCount={studioImages.length}
           currentConversationId={currentConversationId}
         />
 
@@ -202,13 +228,15 @@ export default async function ProjectDetailPage({
                 )}
               </div>
             </div>
-          ) : (
+          ) : currentTab === "memory" ? (
             <Memory
               projectId={project.id}
               facts={facts}
               hasExtractedYet={hasExtractedYet}
               isAdmin={isAdmin}
             />
+          ) : (
+            <Studio projectId={project.id} images={studioImages} />
           )}
         </div>
       </section>

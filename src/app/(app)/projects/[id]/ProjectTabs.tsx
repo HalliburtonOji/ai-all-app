@@ -1,11 +1,12 @@
 import Link from "next/link";
 
-export type ProjectTab = "coach" | "memory";
+export type ProjectTab = "coach" | "memory" | "studio";
 
 interface ProjectTabsProps {
   projectId: string;
   currentTab: ProjectTab;
   factCount: number;
+  imageCount: number;
   currentConversationId: string | null;
 }
 
@@ -13,6 +14,7 @@ export function ProjectTabs({
   projectId,
   currentTab,
   factCount,
+  imageCount,
   currentConversationId,
 }: ProjectTabsProps) {
   // Coach is the default; we drop ?tab=coach from the URL when navigating
@@ -28,6 +30,13 @@ export function ProjectTabs({
     memoryParams.set("conversation", currentConversationId);
   }
   const memoryUrl = `/projects/${projectId}?${memoryParams.toString()}`;
+
+  const studioParams = new URLSearchParams();
+  studioParams.set("tab", "studio");
+  if (currentConversationId) {
+    studioParams.set("conversation", currentConversationId);
+  }
+  const studioUrl = `/projects/${projectId}?${studioParams.toString()}`;
 
   return (
     <nav
@@ -46,6 +55,16 @@ export function ProjectTabs({
         badge={
           factCount > 0
             ? `Remembering ${factCount} ${factCount === 1 ? "thing" : "things"}`
+            : undefined
+        }
+      />
+      <TabLink
+        href={studioUrl}
+        active={currentTab === "studio"}
+        label="Studio"
+        badge={
+          imageCount > 0
+            ? `${imageCount} ${imageCount === 1 ? "image" : "images"}`
             : undefined
         }
       />

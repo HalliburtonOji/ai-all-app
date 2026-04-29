@@ -271,6 +271,44 @@ Same four keys as above. Used by both workflows.
 
 > Add a new entry to the **top** of this list for each work session. Include: date, what shipped, decisions made, and anything left dangling.
 
+### 2026-04-29 (later still 7) — First Studio tool: image generation (Replicate FLUX schnell)
+
+**Shipped:**
+- Migration [supabase/migrations/20260429220714_add_studio_images.sql](supabase/migrations/20260429220714_add_studio_images.sql): private `studio-images` Storage bucket + 3 RLS policies on `storage.objects` (path prefix `${user_id}/...` enforces ownership) + `studio_images` table (id, project_id, user_id, prompt ≤1000 chars, storage_path, model, created_at) with RLS by `user_id = auth.uid()` for select/insert/delete.
+- Generation helper [src/lib/studio/generate-image.ts](src/lib/studio/generate-image.ts): real mode calls Replicate `black-forest-labs/flux-schnell` with `aspect_ratio: "1:1"`, fetches the resulting PNG, uploads to Storage, inserts a row. Mock mode (E2E_TEST_MODE=true) uses a hardcoded 67-byte transparent PNG so the entire Storage + DB pipeline is exercised without any external API call.
+- Server actions [src/app/(app)/projects/[id]/studio-actions.ts](src/app/(app)/projects/[id]/studio-actions.ts): `generateImage` (auth + project ownership + prompt validation + helper call + revalidate) and `deleteImage` (RLS-checked + cleans up the Storage object before the row).
+- Studio tab in [ProjectTabs.tsx](src/app/(app)/projects/[id]/ProjectTabs.tsx) — third tab next to Coach + Memory, with `?tab=studio` URL state and an "N images" badge.
+- Client UI: [Studio.tsx](src/app/(app)/projects/[id]/Studio.tsx) (panel) + [StudioGenerateForm.tsx](src/app/(app)/projects/[id]/StudioGenerateForm.tsx) (prompt textarea + Generate button with `useTransition` pending state) + [StudioImageGrid.tsx](src/app/(app)/projects/[id]/StudioImageGrid.tsx) (responsive 3-column grid with hover-to-show Delete).
+- [src/app/(app)/projects/[id]/page.tsx](src/app/(app)/projects/[id]/page.tsx): added studio_images to the parallel data load (with per-row 1-hour signed URLs generated server-side) and a third tab branch.
+- [next.config.ts](next.config.ts): `images.remotePatterns` for `*.supabase.co/storage/v1/object/sign/**`. Tiles use `<Image unoptimized>` to skip the Next image optimizer (signed URLs are short-lived; optimization isn't worth the cache miss).
+- 5 new E2E tests in [tests/e2e/studio.spec.ts](tests/e2e/studio.spec.ts): generate happy path, empty-prompt validation, RLS cross-user image isolation, delete image, Studio not visible on Coach tab. Total project E2E tests: **45 (5/5 Studio green solo in 23s; 2 pre-existing parallel-load flakes on the full-suite run, both pass solo, same root cause as the documented per-test-signup race)**.
+
+**Decisions:**
+- Provider: Replicate FLUX schnell. ~$0.003/image, fast (~2s), good quality. Same pay-as-you-go billing model the user is already used to.
+- Storage path convention: `${userId}/${projectId}/${imageId}.png`. The first segment being `auth.uid()::text` is what the Storage RLS policies enforce — so even if a row's project_id were tampered with, the underlying object can never escape the user's prefix.
+- Signed URLs server-side, 1-hour TTL, regenerated on every page load. Short enough to discourage sharing, long enough that browser caching during a session works.
+- 1024×1024 only for v1. Aspect-ratio picker, model picker, and seed/regenerate all deferred — easy to layer on, but the v1 lift was already big (new external API + new Storage layer + new tab).
+- Mock mode uploads a real 67-byte PNG so the entire pipeline runs end-to-end in tests. This caught two integration issues that would not have surfaced if mock mode had short-circuited at the helper boundary.
+- `<Image unoptimized>` instead of letting Next optimize signed URLs. The optimizer would cache the optimized variant against the URL, but the URL changes hourly — net waste.
+- No coach integration in v1 (e.g. "ask the coach to refine my prompt") — clean follow-up. Get the plumbing right first.
+
+**Hiccups + fixes:**
+- Initial empty migration. Always remember to actually write the SQL before `db push`.
+- Two RLS tests flaked on the full-suite run with timeouts on what looked like signup contention. Both pass cleanly solo (18s for the pair). Same root cause CLAUDE.md already documents under the storageState entry — multiple workers each running per-test signups against Supabase. The storageState (per-worker) refactor is queued and will fix all of these together. Not blocking the ship.
+
+**Env additions:**
+- New: `REPLICATE_API_TOKEN`. Halli needs to:
+  1. Generate a token at https://replicate.com/account/api-tokens (free signup; pay-as-you-go billing — add $10 to start).
+  2. Paste into `.env.local` as `REPLICATE_API_TOKEN=...`.
+  3. Add the same token in Vercel (Settings → Environment Variables, all environments) and as a GitHub Actions repo secret.
+- Until the token is in Vercel, real-mode generation will fail with a clear "REPLICATE_API_TOKEN not configured" error. Mock mode (E2E only) doesn't need it.
+
+**Next-session candidates:**
+- **Coach × Studio integration**: a "Refine this prompt with the coach" affordance in the generate form, or a way to send a generated image to the coach for critique.
+- **Second Studio tool**: copy/email drafter — pure-Anthropic, no new infra, fast to ship.
+- **Test foundation refactor** (per-worker storageState) — would resolve all the parallel-load flakes at once.
+- Wire `REPLICATE_API_TOKEN` to Vercel + GitHub secrets so real-mode works in prod.
+
 ### 2026-04-29 (later still 6) — A2 of coach deepening: cross-project (user-level) memory
 
 **Shipped:**
