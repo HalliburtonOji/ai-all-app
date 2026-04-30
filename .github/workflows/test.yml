@@ -1,8 +1,21 @@
 name: Tests
 
+# Manual-trigger only (changed 2026-04-30). The previous "run on every
+# push" config burned ~15 min of CI per commit and still flaked under
+# parallel-worker contention with Supabase signups. Until the Phase 3
+# storageState refactor lands (per CLAUDE.md §16) and tests run in <2
+# min reliably, CI Tests fires only when explicitly requested.
+#
+# Vercel's deploy already gates type-checks + builds on every push, so
+# the auto-feedback loop on the build side is intact. Functional
+# regressions are caught by:
+#   - local `npm run test:e2e` before pushing meaningful changes
+#   - the smoke-test workflow against the live deploy after deploy lands
+#   - this Tests workflow when triggered manually (button in Actions UI)
+#
+# To trigger: GitHub repo → Actions tab → "Tests" → "Run workflow".
 on:
-  push:
-    branches: ["**"]
+  workflow_dispatch:
   pull_request:
     branches: [main]
 
