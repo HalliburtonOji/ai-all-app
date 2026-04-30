@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./auth-fixture";
 import { createProject, signUpNewUser } from "./helpers";
 
 const COACH_PLACEHOLDER = "Ask the coach anything…";
@@ -7,7 +7,6 @@ test.describe("Coach suggestions tray", () => {
   test("suggestions appear after the first assistant response", async ({
     page,
   }) => {
-    await signUpNewUser(page);
     await createProject(page, { name: "Suggestions test", type: "channel" });
 
     // Tray should be hidden in a fresh, empty thread.
@@ -33,7 +32,6 @@ test.describe("Coach suggestions tray", () => {
   test("clicking a suggestion fills the input but does not auto-send", async ({
     page,
   }) => {
-    await signUpNewUser(page);
     await createProject(page, {
       name: "Suggestion click test",
       type: "exploration",
@@ -72,7 +70,6 @@ test.describe("Coach suggestions tray", () => {
   });
 
   test("fresh empty thread shows no suggestion tray", async ({ page }) => {
-    await signUpNewUser(page);
     await createProject(page, { name: "Empty thread test", type: "channel" });
 
     // No messages yet → no tray.

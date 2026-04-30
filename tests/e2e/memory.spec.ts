@@ -1,9 +1,8 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./auth-fixture";
 import { createProject, signUpNewUser } from "./helpers";
 
 test.describe("Project memory", () => {
   test("a fact can be edited and the change persists", async ({ page }) => {
-    await signUpNewUser(page);
     await createProject(page, { name: "Edit fact test", type: "channel" });
 
     // Open the Memory tab
@@ -35,7 +34,6 @@ test.describe("Project memory", () => {
   });
 
   test("a fact can be deleted with confirmation", async ({ page }) => {
-    await signUpNewUser(page);
     await createProject(page, { name: "Delete fact test", type: "channel" });
 
     await page.getByRole("link", { name: /^Memory/ }).click();
@@ -59,7 +57,6 @@ test.describe("Project memory", () => {
   });
 
   test("a fact can be pinned and sorts to the top", async ({ page }) => {
-    await signUpNewUser(page);
     await createProject(page, { name: "Pin fact test", type: "channel" });
 
     await page.getByRole("link", { name: /^Memory/ }).click();
@@ -130,7 +127,6 @@ test.describe("Project memory", () => {
   test("memory facts are injected into the coach system prompt", async ({
     page,
   }) => {
-    await signUpNewUser(page);
     await createProject(page, {
       name: "Memory injection test",
       type: "channel",
@@ -168,7 +164,6 @@ test.describe("Project memory", () => {
   }) => {
     test.setTimeout(120_000);
 
-    await signUpNewUser(page);
     await createProject(page, { name: "Cap test", type: "channel" });
 
     await page.getByRole("link", { name: /^Memory/ }).click();

@@ -1,11 +1,10 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./auth-fixture";
 import { createProject, signUpNewUser } from "./helpers";
 
 test.describe("Studio v2 — voice-over generator", () => {
   test("generate voice-over → tile + audio element appear, persist across reload", async ({
     page,
   }) => {
-    await signUpNewUser(page);
     const projectId = await createProject(page, {
       name: "Voice happy path",
       type: "channel",
@@ -34,7 +33,6 @@ test.describe("Studio v2 — voice-over generator", () => {
   test("script over the 500-char cap is rejected, no tile created", async ({
     page,
   }) => {
-    await signUpNewUser(page);
     const projectId = await createProject(page, {
       name: "Voice cap test",
       type: "channel",
@@ -113,7 +111,6 @@ test.describe("Studio v2 — voice-over generator", () => {
   test("delete voice-over: tile + Storage row gone, persists across reload", async ({
     page,
   }) => {
-    await signUpNewUser(page);
     const projectId = await createProject(page, {
       name: "Voice delete test",
       type: "channel",
@@ -141,7 +138,6 @@ test.describe("Studio v2 — voice-over generator", () => {
   test("memory-aware: generated tile records 'mock-audio-with-context'", async ({
     page,
   }) => {
-    await signUpNewUser(page);
     const projectId = await createProject(page, {
       name: "Memory-aware voice",
       type: "channel",

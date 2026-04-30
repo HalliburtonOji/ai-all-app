@@ -1,11 +1,10 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./auth-fixture";
 import { createProject, signUpNewUser } from "./helpers";
 
 test.describe("Studio v2 — image generation", () => {
   test("generate image → tile appears in gallery + persists across reload", async ({
     page,
   }) => {
-    await signUpNewUser(page);
     const projectId = await createProject(page, {
       name: "Studio happy path",
       type: "channel",
@@ -31,7 +30,6 @@ test.describe("Studio v2 — image generation", () => {
   });
 
   test("empty prompt shows validation; no tile created", async ({ page }) => {
-    await signUpNewUser(page);
     const projectId = await createProject(page, {
       name: "Studio empty prompt",
       type: "channel",
@@ -93,7 +91,6 @@ test.describe("Studio v2 — image generation", () => {
   });
 
   test("delete image: tile gone, persists across reload", async ({ page }) => {
-    await signUpNewUser(page);
     const projectId = await createProject(page, {
       name: "Studio delete test",
       type: "channel",
@@ -119,7 +116,6 @@ test.describe("Studio v2 — image generation", () => {
   });
 
   test("Studio image not visible on Coach tab", async ({ page }) => {
-    await signUpNewUser(page);
     const projectId = await createProject(page, {
       name: "Studio tab isolation",
       type: "channel",
@@ -141,7 +137,6 @@ test.describe("Studio v2 — image generation", () => {
   test("memory-aware: generated tile records 'mock-with-context' model", async ({
     page,
   }) => {
-    await signUpNewUser(page);
     const projectId = await createProject(page, {
       name: "Memory-aware studio",
       type: "channel",
@@ -167,7 +162,6 @@ test.describe("Studio v2 — image generation", () => {
   });
 
   test("tool grid landing shows 3 cards, no panel", async ({ page }) => {
-    await signUpNewUser(page);
     const projectId = await createProject(page, {
       name: "Tool grid",
       type: "channel",

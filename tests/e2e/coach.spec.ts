@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./auth-fixture";
 import { createProject, signUpNewUser } from "./helpers";
 
 const COACH_PLACEHOLDER = "Ask the coach anything…";
@@ -7,7 +7,6 @@ test.describe("Coach", () => {
   test("user can send a message and see an assistant response", async ({
     page,
   }) => {
-    await signUpNewUser(page);
     await createProject(page, { name: "Coach happy path", type: "channel" });
 
     await expect(page.getByPlaceholder(COACH_PLACEHOLDER)).toBeVisible();
@@ -27,7 +26,6 @@ test.describe("Coach", () => {
   });
 
   test("messages persist across a full page refresh", async ({ page }) => {
-    await signUpNewUser(page);
     await createProject(page, {
       name: "Coach persistence",
       type: "exploration",
@@ -52,20 +50,29 @@ test.describe("Coach", () => {
     ).toBeVisible();
   });
 
-  test("logged-out user calling /api/coach gets 401", async ({ request }) => {
-    const res = await request.post("/api/coach", {
+  test("logged-out user calling /api/coach gets 401", async ({
+    playwright,
+  }) => {
+    // Worker fixture provides auth cookies by default; for this test we
+    // need a cookie-less request context to verify the unauthenticated
+    // path actually returns 401 (instead of 404 for a missing
+    // conversation under the worker's user).
+    const ctx = await playwright.request.newContext({
+      storageState: { cookies: [], origins: [] },
+    });
+    const res = await ctx.post("/api/coach", {
       data: {
         conversationId: "00000000-0000-0000-0000-000000000000",
         message: "test",
       },
     });
     expect(res.status()).toBe(401);
+    await ctx.dispose();
   });
 
   test("very long message (>10,000 chars) is rejected with a clear error", async ({
     page,
   }) => {
-    await signUpNewUser(page);
     await createProject(page, { name: "Coach validation", type: "sandbox" });
 
     const longMessage = "a".repeat(10_001);
@@ -129,7 +136,6 @@ test.describe("Coach Part 2 — streaming + multi-thread", () => {
   test("response streams in (data-streaming flips true → false)", async ({
     page,
   }) => {
-    await signUpNewUser(page);
     await createProject(page, { name: "Streaming test", type: "channel" });
 
     await page
@@ -158,7 +164,6 @@ test.describe("Coach Part 2 — streaming + multi-thread", () => {
   });
 
   test("threads have independent message histories", async ({ page }) => {
-    await signUpNewUser(page);
     await createProject(page, {
       name: "Multi-thread test",
       type: "exploration",
@@ -258,7 +263,6 @@ test.describe("Coach Part 2 — streaming + multi-thread", () => {
   });
 
   test("rename thread persists across refresh", async ({ page }) => {
-    await signUpNewUser(page);
     await createProject(page, { name: "Rename test", type: "exploration" });
 
     // Send a message so the conversation has content (and an auto-title)
@@ -293,7 +297,6 @@ test.describe("Coach Part 2 — streaming + multi-thread", () => {
   });
 
   test("delete thread removes it from the sidebar", async ({ page }) => {
-    await signUpNewUser(page);
     await createProject(page, { name: "Delete test", type: "sandbox" });
 
     // Title the auto-created conversation by sending a message.
@@ -337,7 +340,6 @@ test.describe("Coach Part 2 — streaming + multi-thread", () => {
   test("auto-title fires after first message in a new thread", async ({
     page,
   }) => {
-    await signUpNewUser(page);
     await createProject(page, { name: "Auto-title test", type: "channel" });
 
     // Initially the auto-created conversation shows the default title.
@@ -368,7 +370,6 @@ test.describe("Coach Part 2 — streaming + multi-thread", () => {
   test("regenerate replaces the assistant response (no duplicate turns)", async ({
     page,
   }) => {
-    await signUpNewUser(page);
     await createProject(page, { name: "Regenerate test", type: "channel" });
 
     await page
@@ -420,7 +421,6 @@ test.describe("Coach Part 2 — streaming + multi-thread", () => {
   });
 
   test("input is disabled while a stream is in progress", async ({ page }) => {
-    await signUpNewUser(page);
     await createProject(page, { name: "Input disable test", type: "channel" });
 
     const textarea = page.getByPlaceholder(COACH_PLACEHOLDER);

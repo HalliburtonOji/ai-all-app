@@ -52,3 +52,9 @@ next-env.d.ts
 
 # scratch / debugging output
 /tmp/
+
+# per-worker auth state (created on first test run, regenerated as needed)
+/playwright/.auth/
+
+# project-local Claude Code settings (personal, not shared)
+/.claude/

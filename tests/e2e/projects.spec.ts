@@ -1,11 +1,10 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./auth-fixture";
 import { createProject, signUpNewUser } from "./helpers";
 
 test.describe("Projects", () => {
   test("a logged-in user can create a project and sees it on /projects", async ({
     page,
   }) => {
-    await signUpNewUser(page);
     const projectName = `My TikTok channel ${Date.now()}`;
 
     await createProject(page, {
@@ -23,7 +22,6 @@ test.describe("Projects", () => {
   test("a created project persists across a full page refresh", async ({
     page,
   }) => {
-    await signUpNewUser(page);
     const projectName = `Persisted project ${Date.now()}`;
 
     const id = await createProject(page, {
@@ -48,7 +46,6 @@ test.describe("Projects", () => {
   test("a user can edit a project name and the change persists", async ({
     page,
   }) => {
-    await signUpNewUser(page);
     const original = `Original name ${Date.now()}`;
     const updated = `Updated name ${Date.now()}`;
 
@@ -74,7 +71,6 @@ test.describe("Projects", () => {
   test("a user can delete a project and it disappears from the list", async ({
     page,
   }) => {
-    await signUpNewUser(page);
     const projectName = `To delete ${Date.now()}`;
 
     await createProject(page, { name: projectName, type: "sandbox" });

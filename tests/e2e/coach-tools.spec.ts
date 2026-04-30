@@ -1,5 +1,5 @@
-import { test, expect } from "@playwright/test";
-import { createProject, signUpNewUser } from "./helpers";
+import { test, expect } from "./auth-fixture";
+import { createProject } from "./helpers";
 
 const COACH_PLACEHOLDER = "Ask the coach anything…";
 
@@ -7,7 +7,6 @@ test.describe("Coach × studio integration", () => {
   test("coach generates an image when the user asks to draw", async ({
     page,
   }) => {
-    await signUpNewUser(page);
     await createProject(page, { name: "Tool draw test", type: "channel" });
 
     await page
@@ -30,7 +29,6 @@ test.describe("Coach × studio integration", () => {
   });
 
   test("coach drafts text when asked to write", async ({ page }) => {
-    await signUpNewUser(page);
     await createProject(page, { name: "Tool draft test", type: "channel" });
 
     await page
@@ -52,7 +50,6 @@ test.describe("Coach × studio integration", () => {
   test("coach generates a voice-over when asked to read aloud", async ({
     page,
   }) => {
-    await signUpNewUser(page);
     await createProject(page, { name: "Tool voice test", type: "channel" });
 
     await page
@@ -68,7 +65,6 @@ test.describe("Coach × studio integration", () => {
   });
 
   test("tool failure surfaces a Retry button", async ({ page }) => {
-    await signUpNewUser(page);
     await createProject(page, { name: "Tool fail test", type: "channel" });
 
     await page
@@ -86,7 +82,6 @@ test.describe("Coach × studio integration", () => {
   test('"Refine with coach" pre-fills the coach textarea, no auto-send', async ({
     page,
   }) => {
-    await signUpNewUser(page);
     const projectId = await createProject(page, {
       name: "Refine flow test",
       type: "channel",
@@ -110,7 +105,6 @@ test.describe("Coach × studio integration", () => {
   test("tool-using suggestion routes to Studio with the prompt pre-filled", async ({
     page,
   }) => {
-    await signUpNewUser(page);
     await createProject(page, {
       name: "Suggestion route test",
       type: "channel",
@@ -137,7 +131,6 @@ test.describe("Coach × studio integration", () => {
   test("recent activity strip appears after first output is generated", async ({
     page,
   }) => {
-    await signUpNewUser(page);
     const projectId = await createProject(page, {
       name: "Activity strip test",
       type: "channel",

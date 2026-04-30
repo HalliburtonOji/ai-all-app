@@ -1,11 +1,10 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./auth-fixture";
 import { createProject, signUpNewUser } from "./helpers";
 
 test.describe("Studio v2 — copy/email drafter", () => {
   test("generate text draft → tile appears + persists across reload", async ({
     page,
   }) => {
-    await signUpNewUser(page);
     const projectId = await createProject(page, {
       name: "Text drafter happy path",
       type: "channel",
@@ -31,7 +30,6 @@ test.describe("Studio v2 — copy/email drafter", () => {
   });
 
   test("empty prompt shows validation; no tile created", async ({ page }) => {
-    await signUpNewUser(page);
     const projectId = await createProject(page, {
       name: "Text empty prompt",
       type: "channel",
@@ -97,7 +95,6 @@ test.describe("Studio v2 — copy/email drafter", () => {
   test("delete text draft: tile gone, persists across reload", async ({
     page,
   }) => {
-    await signUpNewUser(page);
     const projectId = await createProject(page, {
       name: "Text delete test",
       type: "channel",
@@ -125,7 +122,6 @@ test.describe("Studio v2 — copy/email drafter", () => {
   test("memory-aware: generated tile records 'mock-text-with-context'", async ({
     page,
   }) => {
-    await signUpNewUser(page);
     const projectId = await createProject(page, {
       name: "Memory-aware text drafter",
       type: "channel",
