@@ -176,7 +176,9 @@ test.describe("Project memory", () => {
     const extractBtn = page.locator('[data-extract-button="true"]');
     for (let i = 0; i < 51; i++) {
       await extractBtn.click();
-      await expect(extractBtn).toBeEnabled({ timeout: 10_000 });
+      // 20s per click absorbs Linux-CI parallel-worker contention.
+      // Locally each click resolves in <1s.
+      await expect(extractBtn).toBeEnabled({ timeout: 20_000 });
     }
 
     await page.reload();
