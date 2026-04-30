@@ -1,4 +1,4 @@
-import { test as base, chromium } from "@playwright/test";
+import { test as base } from "@playwright/test";
 import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { signUpNewUser } from "./helpers/auth";
@@ -7,67 +7,55 @@ const AUTH_DIR = path.resolve("playwright/.auth");
 
 /**
  * Worker-scoped auth fixture. Signs up ONE fresh user per Playwright
- * worker (not per test) via the regular UI signup flow, saves the
- * resulting cookies to a worker-indexed storageState file, and
- * returns that path. All tests in the same worker inherit the auth
- * state. No more per-test signup → tests start ~1.5s faster each.
+ * worker (not per test), saves the resulting cookies to a worker-
+ * indexed storageState file, and overrides the default storageState
+ * so all tests in the same worker inherit the auth state.
  *
- * Why per-worker (not shared-across-workers):
- *   Supabase's @supabase/ssr rotates refresh tokens. A single shared
- *   storageState file across parallel workers races on cookie
- *   refresh — when one worker refreshes, others' in-memory cookies
- *   become stale and middleware redirects them to /login. Per-worker
- *   isolation sidesteps this entirely: each worker has its own user,
- *   own cookies, no cross-worker sharing.
+ * Why per-worker (not shared across workers): Supabase's
+ * @supabase/ssr rotates refresh tokens. A single storageState shared
+ * across parallel workers races on cookie refresh. Per-worker
+ * isolation = each worker has its own user, own cookies, no
+ * cross-worker sharing.
  *
- * How tests use it:
+ * Tests that need a logged-OUT browser create a fresh request
+ * context locally:
  *
- *   import { test, expect } from "./auth-fixture";
- *   test("my test", async ({ page }) => {
- *     await page.goto("/dashboard"); // already logged in
+ *   const ctx = await playwright.request.newContext({
+ *     storageState: { cookies: [], origins: [] },
  *   });
  *
- * Tests that need a logged-OUT browser (signup/login flow tests,
- * "logged-out user redirected to login" tests) override locally:
+ * Tests that need a SECOND user (cross-user RLS) keep using
+ * `browser.newContext()` + signUpNewUser inside the test. The default
+ * `page` is the worker's user A; the new context becomes user B.
  *
- *   test.use({ storageState: { cookies: [], origins: [] } });
- *
- * Tests that need a SECOND user (cross-user RLS checks) keep using
- * `browser.newContext({ storageState: { cookies: [], origins: [] } })`
- * + signUpNewUser inside the test. The default `page` is the worker's
- * pre-authenticated user A; the new context becomes user B.
+ * This pattern follows Playwright's official "authenticate in a
+ * worker fixture" recipe — see playwright.dev/docs/auth.
  */
-export const test = base.extend<
-  Record<string, never>,
-  { workerStorageState: string }
->({
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export const test = base.extend<{}, { workerStorageState: string }>({
   storageState: ({ workerStorageState }, use) => use(workerStorageState),
 
   workerStorageState: [
-    async ({}, use, workerInfo) => {
+    async ({ browser }, use) => {
       mkdirSync(AUTH_DIR, { recursive: true });
-      const file = path.join(
-        AUTH_DIR,
-        `worker-${workerInfo.workerIndex}.json`,
-      );
+      const id = test.info().parallelIndex;
+      const file = path.join(AUTH_DIR, `worker-${id}.json`);
 
-      if (!existsSync(file)) {
-        const browser = await chromium.launch();
-        const ctx = await browser.newContext({
-          // Set baseURL so signUpNewUser's `goto('/signup')` resolves correctly
-          baseURL:
-            workerInfo.project.use.baseURL ??
-            process.env.BASE_URL ??
-            "http://localhost:3000",
-        });
-        const page = await ctx.newPage();
-        try {
-          await signUpNewUser(page);
-          await ctx.storageState({ path: file });
-        } finally {
-          await ctx.close();
-          await browser.close();
-        }
+      if (existsSync(file)) {
+        await use(file);
+        return;
+      }
+
+      const ctx = await browser.newContext({
+        storageState: undefined,
+        baseURL: process.env.BASE_URL ?? "http://localhost:3000",
+      });
+      const page = await ctx.newPage();
+      try {
+        await signUpNewUser(page);
+        await ctx.storageState({ path: file });
+      } finally {
+        await ctx.close();
       }
 
       await use(file);
