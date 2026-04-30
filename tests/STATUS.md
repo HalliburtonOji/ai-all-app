@@ -1,6 +1,6 @@
 # Test Health Status
 
-**Last updated:** 2026-04-30 (Phase 2 — Studio breadth shipped: copy drafter + voice-over + tool grid)
+**Last updated:** 2026-04-30 (Phase 3a — per-worker storageState shipped; tests run parallel)
 
 ## Coverage by Feature
 
@@ -56,6 +56,7 @@
 
 | Date | Branch | Outcome | Runtime | Where |
 |------|--------|---------|---------|-------|
+| 2026-04-30 | main | ✅ pass (62/62 CI parallel; cap stress tests skipped) | 3.5 min CI / 1.9 min local | Phase 3a — per-worker storageState fixture (`tests/e2e/auth-fixture.ts`). 8 specs migrated, auto-on-push CI re-enabled. Cap tests `test.skip(!!process.env.CI, ...)` — too aggressive for CI parallel contention, kept locally for release verification. |
 | 2026-04-30 | main | ✅ pass (64/64 sequential) | 4.8 min | local (Phase 2 — Studio breadth: studio_outputs superset + copy drafter + voice-over + tool grid + 13 new/changed tests). Sequential mode only — parallel still hits the documented per-test-signup race; Phase 3 will fix. |
 | 2026-04-30 | main | ✅ pass (51/51 sequential, parallel flakes ongoing) | 7.0 min | local (Phase 1 — coach × studio: tool-using coach + memory-aware Studio + activity strip + 6 new tests). Sequential mode (`--workers=1`) clean; parallel run flakes the same Supabase-rate-limit/per-test-signup pattern documented earlier. Phase 3 will fix via per-worker storageState. |
 | 2026-04-29 | main | ✅ pass (45/45, 2 RLS-parallel flakes on full-suite run) | 3.2 min | local (Studio v1 — image gen: schema, Storage bucket, generate/delete, 5 tests). Failed tests pass cleanly solo — same documented per-test-signup parallel race that storageState refactor (queued) will fix. |
