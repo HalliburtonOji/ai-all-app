@@ -71,14 +71,19 @@ export interface MessageToolCall {
 }
 
 /**
- * Hydrated server-side: the Studio image attached to a "tool result"
- * assistant message (i.e. one with studio_image_id set). Carries a
- * fresh signed URL so the client can render without re-fetching.
+ * Hydrated server-side: the Studio output attached to a "tool result"
+ * assistant message (i.e. one with studio_output_id set). The shape
+ * varies by kind:
+ *   - "image": signed_url is the PNG URL.
+ *   - "text":  content_text is the generated copy. signed_url is null.
+ *   - "audio": signed_url is the MP3 URL. content_text holds the spoken script.
  */
-export interface MessageStudioImage {
+export interface MessageStudioOutput {
   id: string;
-  signed_url: string;
+  kind: "image" | "text" | "audio";
   prompt: string;
+  signed_url?: string | null;
+  content_text?: string | null;
 }
 
 export interface Message {
@@ -103,14 +108,15 @@ export interface Message {
   tool_call?: MessageToolCall | null;
   /**
    * Set on the assistant "tool result" message of a tool-using turn:
-   * the message has empty content but renders as the tool output. For
-   * Studio image tool turns, this is the studio_images.id reference.
+   * the message has empty content but renders as the tool output —
+   * an image, a text draft, or an audio clip. References
+   * studio_outputs.id.
    */
-  studio_image_id?: string | null;
+  studio_output_id?: string | null;
   /**
    * Hydrated by the server route that loads the message — joins the
-   * studio_images row + a fresh signed URL.
+   * studio_outputs row + (for binary outputs) a fresh signed URL.
    */
-  studio_image?: MessageStudioImage | null;
+  studio_output?: MessageStudioOutput | null;
   created_at: string;
 }

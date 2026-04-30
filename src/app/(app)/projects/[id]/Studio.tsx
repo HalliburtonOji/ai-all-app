@@ -1,30 +1,62 @@
-import type { StudioImage } from "@/types/studio";
-import { StudioGenerateForm } from "./StudioGenerateForm";
-import { StudioImageGrid } from "./StudioImageGrid";
+import type { StudioOutput } from "@/types/studio";
+import { StudioToolGrid } from "./StudioToolGrid";
+import { StudioImagePanel } from "./StudioImagePanel";
+import { StudioTextPanel } from "./StudioTextPanel";
+import { StudioVoicePanel } from "./StudioVoicePanel";
+
+export type StudioActiveTool = "image" | "text" | "voice";
 
 interface StudioProps {
   projectId: string;
-  images: StudioImage[];
+  outputs: StudioOutput[];
+  activeTool: StudioActiveTool | null;
   prefill?: string | null;
 }
 
-export function Studio({ projectId, images, prefill }: StudioProps) {
-  return (
-    <section
-      data-studio-panel="true"
-      className="mt-4 space-y-6"
-    >
-      <div>
-        <h2 className="text-xl font-semibold text-black dark:text-white">
-          Studio
-        </h2>
-        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-          Generate images for this project. They&apos;re saved here and visible
-          only to you.
-        </p>
-      </div>
-      <StudioGenerateForm projectId={projectId} prefill={prefill} />
-      <StudioImageGrid projectId={projectId} images={images} />
-    </section>
-  );
+/**
+ * Top-level Studio panel. Routes between the tool-grid landing (when
+ * no `?studio=…` param) and per-tool views. Each tool panel is its
+ * own component with its own form + gallery.
+ */
+export function Studio({
+  projectId,
+  outputs,
+  activeTool,
+  prefill,
+}: StudioProps) {
+  const counts = {
+    image: outputs.filter((o) => o.kind === "image").length,
+    text: outputs.filter((o) => o.kind === "text").length,
+    voice: outputs.filter((o) => o.kind === "audio").length,
+  };
+
+  if (activeTool === "image") {
+    return (
+      <StudioImagePanel
+        projectId={projectId}
+        outputs={outputs.filter((o) => o.kind === "image")}
+        prefill={prefill ?? null}
+      />
+    );
+  }
+  if (activeTool === "text") {
+    return (
+      <StudioTextPanel
+        projectId={projectId}
+        outputs={outputs.filter((o) => o.kind === "text")}
+        prefill={prefill ?? null}
+      />
+    );
+  }
+  if (activeTool === "voice") {
+    return (
+      <StudioVoicePanel
+        projectId={projectId}
+        outputs={outputs.filter((o) => o.kind === "audio")}
+        prefill={prefill ?? null}
+      />
+    );
+  }
+
+  return <StudioToolGrid projectId={projectId} counts={counts} />;
 }

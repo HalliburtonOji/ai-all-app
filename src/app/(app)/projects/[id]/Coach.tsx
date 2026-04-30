@@ -564,12 +564,12 @@ function MessageBubble({
   const safeContent = message.content ?? "";
   const isEmpty = safeContent.trim().length === 0;
   const isToolPlaceholder = message.toolPlaceholder === true;
-  const studioImage = message.studio_image ?? null;
-  const isToolResult = !isUser && !!studioImage;
+  const studioOutput = message.studio_output ?? null;
+  const isToolResult = !isUser && !!studioOutput;
   const isToolFailure =
     !isUser &&
     isPartial &&
-    safeContent.startsWith("[Image generation failed");
+    /^\[(Image generation|Text draft|Voice-over) failed/.test(safeContent);
 
   const timestamp = new Date(message.created_at).toLocaleString("en-US", {
     month: "short",
@@ -612,36 +612,89 @@ function MessageBubble({
             data-coach-tool-loading="true"
           >
             <StreamingCursor />
-            <span>Generating image…</span>
+            <span>
+              {message.tool_call?.name === "studio_text_draft"
+                ? "Drafting…"
+                : message.tool_call?.name === "studio_voice_generate"
+                  ? "Generating voice-over…"
+                  : "Generating image…"}
+            </span>
           </span>
-        ) : isToolResult && studioImage ? (
+        ) : isToolResult && studioOutput && studioOutput.kind === "image" && studioOutput.signed_url ? (
           <Link
-            href={`/projects/${projectId}?tab=studio`}
+            href={`/projects/${projectId}?tab=studio&studio=image`}
             className="block"
-            data-coach-tool-image={studioImage.id}
+            data-coach-tool-output={studioOutput.id}
+            data-coach-tool-output-kind="image"
           >
             <span className="relative block aspect-square w-full max-w-[256px] overflow-hidden rounded-md border border-zinc-300/40 bg-zinc-200 dark:border-zinc-700/40 dark:bg-zinc-800">
               <Image
-                src={studioImage.signed_url}
-                alt={studioImage.prompt}
+                src={studioOutput.signed_url}
+                alt={studioOutput.prompt}
                 fill
                 unoptimized
                 sizes="256px"
                 className="object-cover"
               />
             </span>
-            {studioImage.prompt && (
+            {studioOutput.prompt && (
               <p className="mt-1.5 max-w-[256px] text-xs italic opacity-70">
-                {studioImage.prompt}
+                {studioOutput.prompt}
               </p>
             )}
           </Link>
+        ) : isToolResult && studioOutput && studioOutput.kind === "text" && studioOutput.content_text ? (
+          <div
+            className="max-w-[420px] space-y-2"
+            data-coach-tool-output={studioOutput.id}
+            data-coach-tool-output-kind="text"
+          >
+            <p className="whitespace-pre-wrap rounded-md border border-zinc-300/60 bg-white/70 p-2.5 text-sm text-zinc-900 dark:border-zinc-700/60 dark:bg-zinc-950/70 dark:text-zinc-100">
+              {studioOutput.content_text}
+            </p>
+            <Link
+              href={`/projects/${projectId}?tab=studio&studio=text`}
+              className="text-xs italic text-zinc-500 underline-offset-2 hover:underline dark:text-zinc-400"
+            >
+              Open in Studio →
+            </Link>
+          </div>
+        ) : isToolResult && studioOutput && studioOutput.kind === "audio" && studioOutput.signed_url ? (
+          <div
+            className="max-w-[320px] space-y-2"
+            data-coach-tool-output={studioOutput.id}
+            data-coach-tool-output-kind="audio"
+          >
+            <audio
+              controls
+              preload="metadata"
+              src={studioOutput.signed_url}
+              className="w-full"
+            />
+            {studioOutput.prompt && (
+              <p className="text-xs italic opacity-70">
+                &ldquo;{studioOutput.prompt}&rdquo;
+              </p>
+            )}
+            <Link
+              href={`/projects/${projectId}?tab=studio&studio=voice`}
+              className="text-xs italic text-zinc-500 underline-offset-2 hover:underline dark:text-zinc-400"
+            >
+              Open in Studio →
+            </Link>
+          </div>
         ) : isToolFailure ? (
           <div className="space-y-2">
-            <p className="font-medium">Image generation failed.</p>
+            <p className="font-medium">
+              {/^\[Text draft failed/.test(safeContent)
+                ? "Text draft failed."
+                : /^\[Voice-over failed/.test(safeContent)
+                  ? "Voice-over failed."
+                  : "Image generation failed."}
+            </p>
             <p className="text-xs opacity-80">
               {safeContent
-                .replace(/^\[Image generation failed:\s*/, "")
+                .replace(/^\[(Image generation|Text draft|Voice-over) failed:\s*/, "")
                 .replace(/\]$/, "")}
             </p>
             <button

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import type { StudioImage } from "@/types/studio";
+import type { StudioOutput, StudioOutputKind } from "@/types/studio";
 
 interface RecentConversation {
   id: string;
@@ -11,28 +11,37 @@ interface RecentConversation {
 
 interface RecentActivityStripProps {
   projectId: string;
-  recentImages: StudioImage[];
+  recentOutputs: StudioOutput[];
   recentConversation: RecentConversation | null;
 }
 
+const KIND_TO_TOOL: Record<StudioOutputKind, string> = {
+  image: "image",
+  text: "text",
+  audio: "voice",
+};
+
+const KIND_GLYPH: Record<StudioOutputKind, string> = {
+  image: "🖼️",
+  text: "T",
+  audio: "♪",
+};
+
 /**
- * A compact strip below the project header that shows the user's most
- * recent activity in this project — a few image thumbnails on the left,
- * a one-line conversation pointer on the right. Hidden entirely when
- * the project has no activity yet (no clutter on a fresh project).
- *
- * Click any thumbnail to jump to the Studio gallery; click the
- * conversation row to open the latest thread.
+ * Compact strip below the project header. Up to 3 most-recent Studio
+ * outputs as thumbnails on the left (clicking each jumps to the
+ * relevant tool panel), latest assistant-message preview on the right.
+ * Hidden when the project has no activity at all.
  */
 export function RecentActivityStrip({
   projectId,
-  recentImages,
+  recentOutputs,
   recentConversation,
 }: RecentActivityStripProps) {
-  const hasImages = recentImages.length > 0;
+  const hasOutputs = recentOutputs.length > 0;
   const hasConversation = recentConversation !== null;
 
-  if (!hasImages && !hasConversation) return null;
+  if (!hasOutputs && !hasConversation) return null;
 
   return (
     <section
@@ -40,34 +49,37 @@ export function RecentActivityStrip({
       aria-label="Recent activity in this project"
       className="mt-4 flex flex-col gap-3 rounded-lg border border-zinc-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800 dark:bg-zinc-950"
     >
-      {hasImages && (
-        <Link
-          href={`/projects/${projectId}?tab=studio`}
-          aria-label="View Studio gallery"
-          className="flex items-center gap-2"
-        >
+      {hasOutputs && (
+        <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-            Recent images
+            Recent
           </span>
           <span className="flex items-center gap-1.5">
-            {recentImages.slice(0, 3).map((img) => (
-              <span
-                key={img.id}
-                data-recent-activity-thumb={img.id}
-                className="relative inline-block h-9 w-9 overflow-hidden rounded-md border border-zinc-200 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900"
+            {recentOutputs.slice(0, 3).map((o) => (
+              <Link
+                key={o.id}
+                href={`/projects/${projectId}?tab=studio&studio=${KIND_TO_TOOL[o.kind]}`}
+                data-recent-activity-thumb={o.id}
+                data-recent-activity-thumb-kind={o.kind}
+                aria-label={`Open ${o.kind} in Studio`}
+                className="relative inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-md border border-zinc-200 bg-zinc-100 text-xs font-medium text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
               >
-                <Image
-                  src={img.signed_url}
-                  alt={img.prompt}
-                  fill
-                  unoptimized
-                  sizes="36px"
-                  className="object-cover"
-                />
-              </span>
+                {o.kind === "image" && o.signed_url ? (
+                  <Image
+                    src={o.signed_url}
+                    alt={o.prompt}
+                    fill
+                    unoptimized
+                    sizes="36px"
+                    className="object-cover"
+                  />
+                ) : (
+                  <span aria-hidden>{KIND_GLYPH[o.kind]}</span>
+                )}
+              </Link>
             ))}
           </span>
-        </Link>
+        </div>
       )}
 
       {hasConversation && recentConversation && (

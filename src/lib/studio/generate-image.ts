@@ -128,14 +128,20 @@ export async function generateImageForProject(
   }
 
   const { data: row, error: insertError } = await supabase
-    .from("studio_images")
+    .from("studio_outputs")
     .insert({
       id: imageId,
       project_id: projectId,
       user_id: userId,
+      kind: "image",
       prompt: trimmed,
       storage_path: storagePath,
       model: modelLabel,
+      metadata: {
+        aspect_ratio: "1:1",
+        num_inference_steps: 4,
+        memory_hint_applied: hint !== null,
+      },
     })
     .select("id, storage_path")
     .maybeSingle();

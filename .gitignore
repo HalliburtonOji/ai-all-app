@@ -49,3 +49,6 @@ next-env.d.ts
 # smoke test reports — keep folder, ignore generated content
 /smoke-reports/*
 !/smoke-reports/.gitkeep
+
+# scratch / debugging output
+/tmp/

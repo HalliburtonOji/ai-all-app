@@ -27,6 +27,7 @@ export function SuggestionTray({
     if (s.action === "studio.image") {
       const params = new URLSearchParams();
       params.set("tab", "studio");
+      params.set("studio", "image");
       params.set("prefill", s.prompt);
       router.push(`/projects/${projectId}?${params.toString()}`);
       return;

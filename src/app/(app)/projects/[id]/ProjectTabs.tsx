@@ -6,7 +6,7 @@ interface ProjectTabsProps {
   projectId: string;
   currentTab: ProjectTab;
   factCount: number;
-  imageCount: number;
+  outputCount: number;
   currentConversationId: string | null;
 }
 
@@ -14,7 +14,7 @@ export function ProjectTabs({
   projectId,
   currentTab,
   factCount,
-  imageCount,
+  outputCount,
   currentConversationId,
 }: ProjectTabsProps) {
   // Coach is the default; we drop ?tab=coach from the URL when navigating
@@ -63,8 +63,8 @@ export function ProjectTabs({
         active={currentTab === "studio"}
         label="Studio"
         badge={
-          imageCount > 0
-            ? `${imageCount} ${imageCount === 1 ? "image" : "images"}`
+          outputCount > 0
+            ? `${outputCount} ${outputCount === 1 ? "output" : "outputs"}`
             : undefined
         }
       />

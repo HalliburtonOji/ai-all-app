@@ -16,7 +16,7 @@ import { ProjectTabs, type ProjectTab } from "./ProjectTabs";
 import { Memory } from "./Memory";
 import { Studio } from "./Studio";
 import { RecentActivityStrip } from "@/components/RecentActivityStrip";
-import type { StudioImage } from "@/types/studio";
+import type { StudioOutput } from "@/types/studio";
 
 export default async function ProjectDetailPage({
   params,
@@ -27,6 +27,7 @@ export default async function ProjectDetailPage({
     conversation?: string;
     tab?: string;
     prefill?: string;
+    studio?: string;
   }>;
 }) {
   const { id } = await params;
@@ -34,6 +35,7 @@ export default async function ProjectDetailPage({
     conversation: requestedConversationId,
     tab: requestedTab,
     prefill: requestedPrefill,
+    studio: requestedStudio,
   } = await searchParams;
   const supabase = await createClient();
 
@@ -88,40 +90,45 @@ export default async function ProjectDetailPage({
   }
 
   // Load messages for the current conversation (Coach tab needs these).
-  // Fetch tool_call + studio_image_id so tool-using turns render correctly,
-  // and hydrate signed URLs for any tool-result messages.
+  // Fetch tool_call + studio_output_id so tool-using turns render correctly,
+  // and hydrate the linked studio_output row (incl. fresh signed URL for
+  // image/audio outputs) on each tool-result message.
   let initialMessages: Message[] = [];
   if (currentConversationId) {
     const { data: messageRows } = await supabase
       .from("messages")
       .select(
-        "id, role, content, partial, tool_call, studio_image_id, created_at",
+        "id, role, content, partial, tool_call, studio_output_id, created_at",
       )
       .eq("conversation_id", currentConversationId)
       .order("created_at", { ascending: true });
 
     const rows = (messageRows ?? []) as Message[];
 
-    // For each message that has a studio_image_id, fetch the image row +
-    // create a fresh signed URL so the bubble can render without a roundtrip.
     initialMessages = await Promise.all(
       rows.map(async (m) => {
-        if (!m.studio_image_id) return m;
-        const { data: imgRow } = await supabase
-          .from("studio_images")
-          .select("id, prompt, storage_path")
-          .eq("id", m.studio_image_id)
+        if (!m.studio_output_id) return m;
+        const { data: outRow } = await supabase
+          .from("studio_outputs")
+          .select("id, kind, prompt, content_text, storage_path")
+          .eq("id", m.studio_output_id)
           .maybeSingle();
-        if (!imgRow) return m;
-        const { data: signed } = await supabase.storage
-          .from("studio-images")
-          .createSignedUrl(imgRow.storage_path, 60 * 60);
+        if (!outRow) return m;
+        let signedUrl: string | null = null;
+        if (outRow.storage_path) {
+          const { data: signed } = await supabase.storage
+            .from("studio-images")
+            .createSignedUrl(outRow.storage_path, 60 * 60);
+          signedUrl = signed?.signedUrl ?? null;
+        }
         return {
           ...m,
-          studio_image: {
-            id: imgRow.id,
-            prompt: imgRow.prompt,
-            signed_url: signed?.signedUrl ?? "",
+          studio_output: {
+            id: outRow.id,
+            kind: outRow.kind as "image" | "text" | "audio",
+            prompt: outRow.prompt,
+            content_text: outRow.content_text ?? null,
+            signed_url: signedUrl,
           },
         };
       }),
@@ -156,21 +163,28 @@ export default async function ProjectDetailPage({
         ? "studio"
         : "coach";
 
-  // Load studio images (always — used for tab badge + Studio tab gallery)
-  const { data: imageRows } = await supabase
-    .from("studio_images")
-    .select("id, project_id, prompt, storage_path, model, created_at")
+  // Load all Studio outputs for this project (used for tab badge,
+  // recent-activity strip, and the per-tool galleries). Hydrate signed
+  // URLs only for binary outputs (image/audio); text outputs need none.
+  const { data: outputRows } = await supabase
+    .from("studio_outputs")
+    .select(
+      "id, project_id, kind, prompt, content_text, storage_path, model, metadata, created_at",
+    )
     .eq("project_id", project.id)
     .order("created_at", { ascending: false })
-    .limit(50);
+    .limit(150);
 
-  const studioImages: StudioImage[] = await Promise.all(
-    ((imageRows ?? []) as Array<Omit<StudioImage, "signed_url">>).map(
+  const studioOutputs: StudioOutput[] = await Promise.all(
+    ((outputRows ?? []) as Array<Omit<StudioOutput, "signed_url">>).map(
       async (row) => {
+        if (!row.storage_path) {
+          return { ...row, signed_url: null };
+        }
         const { data: signed } = await supabase.storage
           .from("studio-images")
           .createSignedUrl(row.storage_path, 60 * 60);
-        return { ...row, signed_url: signed?.signedUrl ?? "" };
+        return { ...row, signed_url: signed?.signedUrl ?? null };
       },
     ),
   );
@@ -268,7 +282,7 @@ export default async function ProjectDetailPage({
 
       <RecentActivityStrip
         projectId={project.id}
-        recentImages={studioImages.slice(0, 3)}
+        recentOutputs={studioOutputs.slice(0, 3)}
         recentConversation={recentConversation}
       />
 
@@ -277,7 +291,7 @@ export default async function ProjectDetailPage({
           projectId={project.id}
           currentTab={currentTab}
           factCount={facts.length}
-          imageCount={studioImages.length}
+          outputCount={studioOutputs.length}
           currentConversationId={currentConversationId}
         />
 
@@ -316,7 +330,16 @@ export default async function ProjectDetailPage({
           ) : (
             <Studio
               projectId={project.id}
-              images={studioImages}
+              outputs={studioOutputs}
+              activeTool={
+                requestedStudio === "text"
+                  ? "text"
+                  : requestedStudio === "voice"
+                    ? "voice"
+                    : requestedStudio === "image"
+                      ? "image"
+                      : null
+              }
               prefill={requestedPrefill ?? null}
             />
           )}

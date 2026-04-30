@@ -1,6 +1,6 @@
 # Test Health Status
 
-**Last updated:** 2026-04-30 (Phase 1 — coach × studio integration shipped)
+**Last updated:** 2026-04-30 (Phase 2 — Studio breadth shipped: copy drafter + voice-over + tool grid)
 
 ## Coverage by Feature
 
@@ -15,7 +15,10 @@
 | User-level (cross-project) memory — edit fact, delete fact (with confirm), pin sort-to-top, RLS cross-user dashboard isolation, injection into coach system prompt across all projects, 100-fact cap enforcement | 6 | 2026-04-29 | Lives on `/dashboard` ("About you" panel). Mock extraction inserts a deterministic `[mock user fact …]` row + runs the same cap enforcement, so end-to-end behavior is testable without Anthropic. Same admin-button bypass via `E2E_TEST_MODE=true` as project memory. |
 | Studio v1 — image generation: happy path generate + persist, empty-prompt validation, RLS cross-user image isolation, delete image (Storage row + DB row), Studio image not visible on Coach tab | 5 | 2026-04-29 | First Studio tool. Mock mode uploads a hardcoded 67-byte transparent PNG to the real `studio-images` Storage bucket so Storage + RLS path-prefix policy + signed-URL flow are all exercised end-to-end without calling Replicate. Real mode uses Replicate FLUX schnell (~$0.003/image, ~2s). |
 | Studio memory-awareness — generated tile records `mock-with-context` model when project has facts | 1 | 2026-04-30 | Confirms project + user facts are appended to the FLUX prompt as compact context. Real-mode quality verified manually. |
-| Coach × Studio (Phase 1): coach generates an image when asked + image persists across reload, tool failure surfaces a Retry button (forced via `__fail__` token in prompt), "Refine with coach" pre-fills coach textarea (no auto-send), tool-using suggestion routes to Studio with prefill, recent-activity strip shows after first generation | 5 | 2026-04-30 | Mock mode for the streaming endpoint detects a draw/illustrate/picture trigger and simulates a tool_use stop, then runs the same handler the real flow uses (image gen → studio_image_id linkage → SSE tool_started / tool_result / tool_failed events). Real-mode Anthropic tool-use behavior verified manually. |
+| Coach × Studio (Phase 1+2): coach generates image / text draft / voice-over when asked, tool failure → Retry chip, "Refine with coach" pre-fill (no auto-send), tool-using suggestion routes to Studio with prefill, recent-activity strip after first generation | 7 | 2026-04-30 | Mock mode for the streaming endpoint detects per-tool keywords (image > voice > text priority) and simulates a tool_use stop, then runs the real handler against the mock-mode generator for each tool. Real-mode Anthropic tool-use behavior verified manually. |
+| Studio v2 — text drafter (copy/email): generate happy path + reload, empty prompt validation, RLS cross-user, delete, memory-aware (`mock-text-with-context` model when facts exist) | 5 | 2026-04-30 | Anthropic-only; no Storage. content_text column on studio_outputs. Mock-mode inserts a deterministic `[mock copy …] [kind=…]` string. |
+| Studio v2 — voice-over: generate happy path + audio element renders + reload, 500-char cap rejected, RLS cross-user, delete (Storage row + DB row), memory-aware (`mock-audio-with-context` model when facts exist) | 5 | 2026-04-30 | ElevenLabs Flash v2.5 in real mode; mock mode uploads ~105-byte MP3 stub to Storage. 500-char hard cap on script enforced server-side and via disabled Generate button. |
+| Studio v2 — tool grid: landing renders 3 cards, no tool panel | (covered in studio.spec.ts) | 2026-04-30 | Studio tab now routes between tool grid (no `?studio=` param) and 3 per-tool panels (`?studio=image|text|voice`). Each card has `data-studio-tool-card`. |
 
 ## Untested by Design
 
@@ -44,13 +47,16 @@
 - **User memory: source_project_id attribution on user facts** — Set in extraction (most-recent project of the user); not asserted in E2E.
 - **Studio: real Replicate output quality** — Mock mode uploads a tiny transparent PNG to verify the pipeline. Real model output is verified manually after deploy.
 - **Studio: Storage RLS path-prefix policy under direct Storage API access** — RLS is enforced by `(storage.foldername(name))[1] = auth.uid()::text`. Cross-user image privacy is asserted indirectly (via project page RLS); a direct Storage API test (anon client requesting another user's signed URL path) is not yet covered.
-- **Studio: prompt length cap (1000 chars)** — Server action rejects; happy path tested. The 1000+ char rejection is not directly asserted.
+- **Studio: prompt length cap** — Image: 1000 chars, text: 2000 chars, voice: 500 chars. Voice over-cap is now asserted via the disabled-button test. Image and text caps are server-action enforced; not directly asserted.
+- **Real-mode Anthropic text drafter quality** — Mock mode covers plumbing (insert + retrieval). Real-mode output style/length verified manually after deploy.
+- **Real-mode ElevenLabs voice quality** — Mock mode uploads a 105-byte stub MP3 to verify the Storage + signed-URL pipeline. Real-mode clip quality + timing verified manually.
 - **Real-mode Anthropic tool_use behavior** — Mock mode simulates the tool-use stop reason + content blocks. Whether the real model actually invokes `studio_image_generate` on prompts like "draw me a cat" is verified manually after deploy. (Phase 2 may add a smoke-test step.)
 
 ## Recent Test Runs
 
 | Date | Branch | Outcome | Runtime | Where |
 |------|--------|---------|---------|-------|
+| 2026-04-30 | main | ✅ pass (64/64 sequential) | 4.8 min | local (Phase 2 — Studio breadth: studio_outputs superset + copy drafter + voice-over + tool grid + 13 new/changed tests). Sequential mode only — parallel still hits the documented per-test-signup race; Phase 3 will fix. |
 | 2026-04-30 | main | ✅ pass (51/51 sequential, parallel flakes ongoing) | 7.0 min | local (Phase 1 — coach × studio: tool-using coach + memory-aware Studio + activity strip + 6 new tests). Sequential mode (`--workers=1`) clean; parallel run flakes the same Supabase-rate-limit/per-test-signup pattern documented earlier. Phase 3 will fix via per-worker storageState. |
 | 2026-04-29 | main | ✅ pass (45/45, 2 RLS-parallel flakes on full-suite run) | 3.2 min | local (Studio v1 — image gen: schema, Storage bucket, generate/delete, 5 tests). Failed tests pass cleanly solo — same documented per-test-signup parallel race that storageState refactor (queued) will fix. |
 | 2026-04-29 | main | ✅ pass (40/40, 1 streaming flake on parallel run) | 2.8 min | local (A2 — user-level memory: schema, extraction, injection, dashboard panel, 6 tests) |

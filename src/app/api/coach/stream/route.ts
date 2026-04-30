@@ -7,7 +7,12 @@ import {
   buildUserMemoryContext,
 } from "@/lib/coach/build-memory";
 import { ALL_COACH_TOOLS } from "@/lib/coach/tool-specs";
-import { handleStudioImage } from "@/lib/coach/tool-handlers";
+import {
+  handleStudioImage,
+  handleStudioTextDraft,
+  handleStudioVoiceOver,
+  type StudioToolHandlerResult,
+} from "@/lib/coach/tool-handlers";
 import type { Project } from "@/types/project";
 import type { MessageRole, ProjectFact, UserFact } from "@/types/coach";
 
@@ -22,14 +27,21 @@ const HISTORY_KEEP_MOST_RECENT = 40;
 
 const DEFAULT_CONVERSATION_TITLE = "New conversation";
 
-// In E2E_TEST_MODE, when the user message matches this regex the mock
-// branch simulates a tool-using turn (preamble text + tool_use) so the
-// integration path is testable without calling Anthropic.
-const MOCK_TOOL_TRIGGER =
-  /\b(draw|image|illustrate|picture|logo|sketch|paint|render)\b/i;
+// In E2E_TEST_MODE, when the user message matches one of these regexes
+// the mock branch simulates a tool-using turn (preamble text +
+// tool_use) so the integration path is testable without calling
+// Anthropic. The order matters — we pick the most specific match
+// first (image > voice > text), so a single message can't trigger
+// two tools.
+const MOCK_TRIGGER_IMAGE =
+  /\b(draw|illustrate|picture|logo|sketch|paint|render|image|visualize)\b/i;
+const MOCK_TRIGGER_VOICE =
+  /\b(voice|narrate|speak|read.{0,12}aloud|read.{0,12}out.{0,12}loud|tts)\b/i;
+const MOCK_TRIGGER_TEXT =
+  /\b(draft|write|copy|email|caption|tweet|post|headline)\b/i;
 
 const MESSAGE_SELECT =
-  "id, role, content, model, input_tokens, output_tokens, partial, tool_call, studio_image_id, created_at";
+  "id, role, content, model, input_tokens, output_tokens, partial, tool_call, studio_output_id, created_at";
 
 interface PendingToolUse {
   tool_use_id: string;
@@ -184,11 +196,39 @@ export async function POST(request: Request) {
           const userMemorySuffix =
             userFacts.length > 0 ? ` [user-memory: ${userFacts.length}]` : "";
 
-          if (MOCK_TOOL_TRIGGER.test(trimmed)) {
-            // Tool-using mock turn: emit a short preamble, then signal a tool_use.
+          // Pick a tool based on which trigger matched. Order is
+          // image > voice > text so a message mentioning both "draw"
+          // and "write" picks image (more specific intent for the
+          // visual modality). At most one tool fires per turn.
+          let mockTool: {
+            name: string;
+            preamble: string;
+            input: Record<string, unknown>;
+          } | null = null;
+          if (MOCK_TRIGGER_IMAGE.test(trimmed)) {
+            mockTool = {
+              name: "studio_image_generate",
+              preamble: "I'll draw that for you",
+              input: { prompt: trimmed },
+            };
+          } else if (MOCK_TRIGGER_VOICE.test(trimmed)) {
+            mockTool = {
+              name: "studio_voice_generate",
+              preamble: "I'll read that aloud for you",
+              input: { script: trimmed.slice(0, 500) },
+            };
+          } else if (MOCK_TRIGGER_TEXT.test(trimmed)) {
+            mockTool = {
+              name: "studio_text_draft",
+              preamble: "I'll draft that for you",
+              input: { prompt: trimmed, kind: "general" },
+            };
+          }
+
+          if (mockTool) {
             const preambleChunks = [
               "[mock] ",
-              "I'll draw that for you",
+              mockTool.preamble,
               memorySuffix,
               userMemorySuffix,
               ".",
@@ -202,8 +242,8 @@ export async function POST(request: Request) {
               tool_use_id: `mock_tool_${Date.now()}_${Math.random()
                 .toString(16)
                 .slice(2, 8)}`,
-              name: "studio_image_generate",
-              input: { prompt: trimmed },
+              name: mockTool.name,
+              input: mockTool.input,
             };
           } else {
             // Existing chatty mock — no tool, just text.
@@ -311,7 +351,7 @@ export async function POST(request: Request) {
             }),
           );
 
-          let handlerResult;
+          let handlerResult: StudioToolHandlerResult;
           if (toolUse.name === "studio_image_generate") {
             handlerResult = await handleStudioImage(
               supabase,
@@ -319,17 +359,39 @@ export async function POST(request: Request) {
               project.id,
               toolUse.input as { prompt: unknown },
             );
+          } else if (toolUse.name === "studio_text_draft") {
+            handlerResult = await handleStudioTextDraft(
+              supabase,
+              user.id,
+              project.id,
+              toolUse.input as { prompt: unknown; kind: unknown },
+            );
+          } else if (toolUse.name === "studio_voice_generate") {
+            handlerResult = await handleStudioVoiceOver(
+              supabase,
+              user.id,
+              project.id,
+              toolUse.input as { script: unknown; voice_id?: unknown },
+            );
           } else {
             handlerResult = { error: `Unknown tool: ${toolUse.name}` };
           }
 
           if ("error" in handlerResult) {
+            // Per-tool error label so the client's tool-failure bubble
+            // detector keeps working with the new tools too.
+            const failurePrefix =
+              toolUse.name === "studio_text_draft"
+                ? "Text draft failed"
+                : toolUse.name === "studio_voice_generate"
+                  ? "Voice-over failed"
+                  : "Image generation failed";
             const { data: errMsg } = await supabase
               .from("messages")
               .insert({
                 conversation_id: conversationId,
                 role: "assistant",
-                content: `[Image generation failed: ${handlerResult.error}]`,
+                content: `[${failurePrefix}: ${handlerResult.error}]`,
                 model: modelUsed,
                 partial: false,
               })
@@ -351,18 +413,30 @@ export async function POST(request: Request) {
                 content: "",
                 model: modelUsed,
                 partial: false,
-                studio_image_id: handlerResult.image_id,
+                studio_output_id: handlerResult.output_id,
               })
               .select(MESSAGE_SELECT)
               .single();
+            const studioOutputPayload =
+              handlerResult.kind === "text"
+                ? {
+                    id: handlerResult.output_id,
+                    kind: "text" as const,
+                    prompt: handlerResult.prompt,
+                    content_text: handlerResult.content_text,
+                    signed_url: null,
+                  }
+                : {
+                    id: handlerResult.output_id,
+                    kind: handlerResult.kind,
+                    prompt: handlerResult.prompt,
+                    signed_url: handlerResult.signed_url,
+                    content_text: null,
+                  };
             const hydrated = resultMsg
               ? {
                   ...resultMsg,
-                  studio_image: {
-                    id: handlerResult.image_id,
-                    signed_url: handlerResult.signed_url,
-                    prompt: handlerResult.prompt,
-                  },
+                  studio_output: studioOutputPayload,
                 }
               : null;
             controller.enqueue(

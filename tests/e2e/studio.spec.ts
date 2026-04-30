@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { createProject, signUpNewUser } from "./helpers";
 
-test.describe("Studio v1 — image generation", () => {
+test.describe("Studio v2 — image generation", () => {
   test("generate image → tile appears in gallery + persists across reload", async ({
     page,
   }) => {
@@ -11,21 +11,23 @@ test.describe("Studio v1 — image generation", () => {
       type: "channel",
     });
 
-    await page.goto(`/projects/${projectId}?tab=studio`);
-    await expect(
-      page.locator('[data-studio-panel="true"]'),
-    ).toBeVisible();
+    await page.goto(`/projects/${projectId}?tab=studio&studio=image`);
+    await expect(page.locator('[data-studio-panel="image"]')).toBeVisible();
 
-    await page.getByLabel("Image prompt").fill("A neon-lit Lagos street market at dusk");
     await page
-      .locator('[data-studio-generate-button="true"]')
-      .click();
+      .getByLabel("Image prompt")
+      .fill("A neon-lit Lagos street market at dusk");
+    await page.locator('[data-studio-generate-button="true"]').click();
 
-    const firstTile = page.locator("[data-studio-image-id]").first();
+    const firstTile = page
+      .locator('[data-studio-output-kind="image"]')
+      .first();
     await expect(firstTile).toBeVisible({ timeout: 15_000 });
 
     await page.reload();
-    await expect(page.locator("[data-studio-image-id]")).toHaveCount(1);
+    await expect(
+      page.locator('[data-studio-output-kind="image"]'),
+    ).toHaveCount(1);
   });
 
   test("empty prompt shows validation; no tile created", async ({ page }) => {
@@ -35,21 +37,18 @@ test.describe("Studio v1 — image generation", () => {
       type: "channel",
     });
 
-    await page.goto(`/projects/${projectId}?tab=studio`);
+    await page.goto(`/projects/${projectId}?tab=studio&studio=image`);
 
-    // Browser-level required validation — submit without typing
     const promptField = page.getByLabel("Image prompt");
     await promptField.fill("   ");
-    // Required + minLength=1 means the form may submit (whitespace is non-empty
-    // for HTML5 purposes), so the server action should bounce it back as an error.
-    await page
-      .locator('[data-studio-generate-button="true"]')
-      .click();
+    await page.locator('[data-studio-generate-button="true"]').click();
 
     await expect(page.locator('[data-studio-error="true"]')).toBeVisible({
       timeout: 5_000,
     });
-    await expect(page.locator("[data-studio-image-id]")).toHaveCount(0);
+    await expect(
+      page.locator('[data-studio-output-kind="image"]'),
+    ).toHaveCount(0);
   });
 
   test("RLS: user B cannot see user A's images", async ({ browser }) => {
@@ -61,11 +60,11 @@ test.describe("Studio v1 — image generation", () => {
       type: "channel",
     });
 
-    await pageA.goto(`/projects/${projectIdA}?tab=studio`);
+    await pageA.goto(`/projects/${projectIdA}?tab=studio&studio=image`);
     await pageA.getByLabel("Image prompt").fill("A's secret image");
     await pageA.locator('[data-studio-generate-button="true"]').click();
     await expect(
-      pageA.locator("[data-studio-image-id]").first(),
+      pageA.locator('[data-studio-output-kind="image"]').first(),
     ).toBeVisible({ timeout: 15_000 });
     await ctxA.close();
 
@@ -73,20 +72,22 @@ test.describe("Studio v1 — image generation", () => {
     const pageB = await ctxB.newPage();
     await signUpNewUser(pageB);
 
-    // Direct visit to A's project URL → 404 (project RLS already enforces)
-    const responseB = await pageB.goto(`/projects/${projectIdA}?tab=studio`);
+    const responseB = await pageB.goto(
+      `/projects/${projectIdA}?tab=studio&studio=image`,
+    );
     expect(responseB?.status()).toBe(404);
 
-    // B's own studio tab is empty
     const projectIdB = await createProject(pageB, {
       name: "User B studio project",
       type: "channel",
     });
-    await pageB.goto(`/projects/${projectIdB}?tab=studio`);
+    await pageB.goto(`/projects/${projectIdB}?tab=studio&studio=image`);
     await expect(
-      pageB.locator('[data-studio-empty-state="true"]'),
+      pageB.locator('[data-studio-empty-state="image"]'),
     ).toBeVisible();
-    await expect(pageB.locator("[data-studio-image-id]")).toHaveCount(0);
+    await expect(
+      pageB.locator('[data-studio-output-kind="image"]'),
+    ).toHaveCount(0);
 
     await ctxB.close();
   });
@@ -98,21 +99,23 @@ test.describe("Studio v1 — image generation", () => {
       type: "channel",
     });
 
-    await page.goto(`/projects/${projectId}?tab=studio`);
+    await page.goto(`/projects/${projectId}?tab=studio&studio=image`);
     await page.getByLabel("Image prompt").fill("To be deleted");
     await page.locator('[data-studio-generate-button="true"]').click();
 
-    const tile = page.locator("[data-studio-image-id]").first();
+    const tile = page.locator('[data-studio-output-kind="image"]').first();
     await expect(tile).toBeVisible({ timeout: 15_000 });
 
     await tile.hover();
-    await tile.getByRole("button", { name: "Delete image" }).click();
+    await tile.getByRole("button", { name: "Delete output" }).click();
 
-    await expect(page.locator("[data-studio-image-id]")).toHaveCount(0, {
-      timeout: 10_000,
-    });
+    await expect(
+      page.locator('[data-studio-output-kind="image"]'),
+    ).toHaveCount(0, { timeout: 10_000 });
     await page.reload();
-    await expect(page.locator("[data-studio-image-id]")).toHaveCount(0);
+    await expect(
+      page.locator('[data-studio-output-kind="image"]'),
+    ).toHaveCount(0);
   });
 
   test("Studio image not visible on Coach tab", async ({ page }) => {
@@ -122,19 +125,20 @@ test.describe("Studio v1 — image generation", () => {
       type: "channel",
     });
 
-    await page.goto(`/projects/${projectId}?tab=studio`);
+    await page.goto(`/projects/${projectId}?tab=studio&studio=image`);
     await page.getByLabel("Image prompt").fill("Tab isolation test");
     await page.locator('[data-studio-generate-button="true"]').click();
     await expect(
-      page.locator("[data-studio-image-id]").first(),
+      page.locator('[data-studio-output-kind="image"]').first(),
     ).toBeVisible({ timeout: 15_000 });
 
-    // Switch to Coach tab and confirm no image tile is visible
     await page.goto(`/projects/${projectId}`);
-    await expect(page.locator("[data-studio-image-id]")).toHaveCount(0);
+    await expect(
+      page.locator('[data-studio-output-kind="image"]'),
+    ).toHaveCount(0);
   });
 
-  test("memory-aware: when project has facts, generated tile records 'mock-with-context'", async ({
+  test("memory-aware: generated tile records 'mock-with-context' model", async ({
     page,
   }) => {
     await signUpNewUser(page);
@@ -150,16 +154,33 @@ test.describe("Studio v1 — image generation", () => {
       timeout: 10_000,
     });
 
-    // Generate an image — helper should detect the fact + flag it on the row.
-    await page.goto(`/projects/${projectId}?tab=studio`);
+    await page.goto(`/projects/${projectId}?tab=studio&studio=image`);
     await page.getByLabel("Image prompt").fill("memory-aware portrait");
     await page.locator('[data-studio-generate-button="true"]').click();
 
-    const tile = page.locator("[data-studio-image-id]").first();
+    const tile = page.locator('[data-studio-output-kind="image"]').first();
     await expect(tile).toBeVisible({ timeout: 15_000 });
     await expect(tile).toHaveAttribute(
-      "data-studio-image-model",
+      "data-studio-output-model",
       "mock-with-context",
     );
+  });
+
+  test("tool grid landing shows 3 cards, no panel", async ({ page }) => {
+    await signUpNewUser(page);
+    const projectId = await createProject(page, {
+      name: "Tool grid",
+      type: "channel",
+    });
+
+    await page.goto(`/projects/${projectId}?tab=studio`);
+    await expect(
+      page.locator('[data-studio-tool-grid="true"]'),
+    ).toBeVisible();
+    await expect(page.locator("[data-studio-tool-card]")).toHaveCount(3);
+    // No specific panel rendered yet
+    await expect(page.locator('[data-studio-panel="image"]')).toHaveCount(0);
+    await expect(page.locator('[data-studio-panel="text"]')).toHaveCount(0);
+    await expect(page.locator('[data-studio-panel="voice"]')).toHaveCount(0);
   });
 });
