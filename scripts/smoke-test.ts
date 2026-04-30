@@ -114,10 +114,10 @@ User journeys to cover, roughly in order. Use judgment — if a journey passes s
 10. **Phase 1 — Coach × Studio integration check.** Open the project (if not already there).
     a. Click the "Studio" tab. Confirm a heading "Studio" and a prompt textarea (aria-label "Image prompt") appear.
     b. Fill the prompt textarea with "a simple line drawing of a sun" (or similar — keep it cheap and fast for FLUX schnell).
-    c. Click "Generate image". Wait up to ~25 seconds for an image tile to appear in the gallery (a `[data-studio-image-id]` element). If it times out, screenshot + report critical.
+    c. Click "Generate image". Wait up to ~25 seconds for an image tile to appear in the gallery (an element with attribute data-studio-image-id). If it times out, screenshot + report critical.
     d. Click the "Coach" tab (or its TabLink "Coach"). The coach view should load.
-    e. Fill the chat textarea (placeholder "Ask the coach anything…") with "Please draw me a small sketch of a happy cat" and click Send.
-    f. Within ~30s the assistant should stream a short text reply followed by an image bubble (a `[data-coach-tool-image]` element). Confirm at least one tool image is visible. If only text appears (no image after 30s), the tool-use path may not be wired in prod — screenshot + report critical.
+    e. Fill the chat textarea (its name attribute is "message"; placeholder "Ask the coach anything…") with "Please draw me a small sketch of a happy cat" and click Send.
+    f. Within ~30s the assistant should stream a short text reply followed by an image bubble (an element with attribute data-coach-tool-image). Confirm at least one tool image is visible. If only text appears (no image after 30s), the tool-use path may not be wired in prod — screenshot + report critical.
     g. (Optional, only if you have token budget left) Switch back to the Studio tab and click the "Refine with coach" button. Confirm you land on the Coach tab with the prompt textarea pre-filled with whatever was in the Studio prompt box.
 11. Open the project, click Delete project, confirm "Yes, delete". Should redirect to /projects with no projects.
 12. Log out via the navbar.

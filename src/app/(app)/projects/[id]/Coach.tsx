@@ -510,6 +510,7 @@ export function Coach({
         <div className="flex items-end gap-2">
           <textarea
             ref={textareaRef}
+            name="message"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
