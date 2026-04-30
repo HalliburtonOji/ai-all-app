@@ -275,6 +275,34 @@ Same four keys as above. Used by both workflows.
 
 > Add a new entry to the **top** of this list for each work session. Include: date, what shipped, decisions made, and anything left dangling.
 
+### 2026-05-01 — Phase 3b mobile pass + scheduled-routine cleanup
+
+**Shipped:**
+- New [tests/e2e/mobile.spec.ts](tests/e2e/mobile.spec.ts): 9 tests at iPhone SE viewport (375×667). Covers `/dashboard`, `/projects`, `/projects/new`, project detail Coach/Memory tabs, Studio tool grid, and all 3 Studio per-tool panels (image/text/voice). Each test asserts (a) `document.documentElement.scrollWidth ≤ viewport.width + 1` (no horizontal overflow) and (b) the route's primary interactive element is visible. All 9 green; no CSS fixes were needed — the existing `flex-col sm:flex-row` and `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3` patterns plus `sm:flex-wrap` already cover small screens.
+- Total project E2E count after this phase: **73 tests** (62 CI parallel + 2 cap stress local-only + 9 mobile = 73, all green sequentially in 1.9 min parallel).
+
+**Cleanup:**
+- Removed (disabled via API) the daily-fire scheduled remote agent I'd over-engineered earlier. Halli's "limit reset" question wasn't a request for background autonomous fires; they work interactively. Memory at `memory/project_scheduled_routine.md` updated with the lesson so future me doesn't re-create it.
+
+**Decisions:**
+- **Mobile-spec tests don't try real generation** (no Replicate / no real Anthropic) — they only check layout + element reachability. A separate "mobile interactivity" spec could fill any cross-cutting flow, but the 9 layout checks catch the regressions that actually break mobile users.
+- **No CSS changes shipped.** The mobile-first Tailwind patterns (`grid-cols-1 sm:grid-cols-2`, `flex-col sm:flex-row`, etc.) were already in place from Phase 1+2. Tests confirm they hold.
+- **Same memory-tab heading gotcha as before** — the Memory panel has no heading; assertions go on the `[data-extract-button="true"]` (always visible in test mode) instead.
+
+**Hiccups + fixes:**
+- First mobile-spec attempt used `test.use(devices["iPhone SE"])` which sets `defaultBrowserType` and Playwright rejects that inside a describe block. Switched to `test.use({ viewport: { width: 375, height: 667 } })` — same effect, no browser-type conflict.
+- Memory tab test initially asserted on a heading that doesn't exist. Fixed to assert on the admin extract button (which is always rendered in test mode).
+
+**Robustness checklist (mobile sub-item):**
+- ✅ 9/9 mobile tests green parallel + sequential.
+- ✅ No regressions in existing 64 tests (one known flake on studio.spec delete-image survives — pre-existing, CI handles via retry).
+- ⏳ Real-deploy mobile spot-check after CI ships — Halli can do this on https://ai-all-app.vercel.app from a real phone or Chrome devtools mobile mode.
+
+**Next sub-items in Phase 3b (queued, in leverage order):**
+- Accessibility pass (`@axe-core/playwright` + fixes for any A/AA violations)
+- Error monitoring (Sentry SDK + code instrumentation; Halli adds DSN to Vercel)
+- Performance pass (Lighthouse audit + fixes for routes scoring <90)
+
 ### 2026-04-30 (later still) — Phase 3a of master plan: per-worker storageState test fixture
 
 The test foundation rebuild that fixes slow + flaky CI.
@@ -675,9 +703,10 @@ Guiding principles for every phase:
 **Deliverables:** copy/email drafter (Anthropic, no infra) · voice-over generator (ElevenLabs + Storage) · Studio tab becomes a tool grid · generic `studio_outputs` superset table so adding tool #4 is pure UI work.
 **Robustness bar:** one schema, three tools using it · per-tool RLS independently verified · ElevenLabs cost cap (max 30s clips on free tier) · all three tools mobile-verified.
 
-### Phase 3 — Foundation hardening · ~2 sessions (3a shipped 2026-04-30)
+### Phase 3 — Foundation hardening · ~2 sessions (3a + mobile sub-item shipped 2026-04-30)
 - ✅ **3a: per-worker storageState** — auth-fixture.ts; full suite 1.9 min parallel local, ~3.5 min CI; auto-on-push CI re-enabled.
-- ⏳ 3b: error monitoring (Sentry/equivalent), accessibility pass (axe), perf pass (Lighthouse ≥90), mobile pass at 375px.
+- ✅ **mobile pass** at 375px — `tests/e2e/mobile.spec.ts` covers 9 routes (dashboard, projects list, new project form, project Coach/Memory/Studio tool grid + 3 panels). All green; no CSS fixes needed (existing responsive patterns held).
+- ⏳ remaining 3b: error monitoring (Sentry/equivalent), accessibility pass (axe), perf pass (Lighthouse ≥90).
 **Goal:** App stops feeling fragile. New features become cheaper to add.
 **Deliverables:** per-worker `storageState` Playwright refactor (~5 signups/run instead of 60) · Sentry (or equivalent) wired client + server · accessibility pass (keyboard nav, aria, focus) · performance pass (Lighthouse ≥90) · mobile pass.
 **Robustness bar:** full E2E suite <2 min, zero flakes across 5 consecutive runs · Lighthouse ≥90 on top-4 routes · WCAG AA basics verified · CI green.

@@ -1,6 +1,6 @@
 # Test Health Status
 
-**Last updated:** 2026-04-30 (Phase 3a — per-worker storageState shipped; tests run parallel)
+**Last updated:** 2026-05-01 (Phase 3b mobile pass shipped — 9 new tests at 375px viewport)
 
 ## Coverage by Feature
 
@@ -18,6 +18,7 @@
 | Coach × Studio (Phase 1+2): coach generates image / text draft / voice-over when asked, tool failure → Retry chip, "Refine with coach" pre-fill (no auto-send), tool-using suggestion routes to Studio with prefill, recent-activity strip after first generation | 7 | 2026-04-30 | Mock mode for the streaming endpoint detects per-tool keywords (image > voice > text priority) and simulates a tool_use stop, then runs the real handler against the mock-mode generator for each tool. Real-mode Anthropic tool-use behavior verified manually. |
 | Studio v2 — text drafter (copy/email): generate happy path + reload, empty prompt validation, RLS cross-user, delete, memory-aware (`mock-text-with-context` model when facts exist) | 5 | 2026-04-30 | Anthropic-only; no Storage. content_text column on studio_outputs. Mock-mode inserts a deterministic `[mock copy …] [kind=…]` string. |
 | Studio v2 — voice-over: generate happy path + audio element renders + reload, 500-char cap rejected, RLS cross-user, delete (Storage row + DB row), memory-aware (`mock-audio-with-context` model when facts exist) | 5 | 2026-04-30 | ElevenLabs Flash v2.5 in real mode; mock mode uploads ~105-byte MP3 stub to Storage. 500-char hard cap on script enforced server-side and via disabled Generate button. |
+| Mobile pass — iPhone SE 375×667 viewport: 9 routes covered (dashboard, projects list, new project, project Coach/Memory/Studio tool grid + 3 panels). Each test asserts no horizontal scroll + primary interactive element visible. | 9 | 2026-05-01 | All green; no CSS fixes needed — existing Tailwind responsive patterns held. Layout-only checks; doesn't test cross-cutting flows on mobile (those are covered by the regular suite which still passes at default viewport). |
 | Studio v2 — tool grid: landing renders 3 cards, no tool panel | (covered in studio.spec.ts) | 2026-04-30 | Studio tab now routes between tool grid (no `?studio=` param) and 3 per-tool panels (`?studio=image|text|voice`). Each card has `data-studio-tool-card`. |
 
 ## Untested by Design
@@ -56,6 +57,7 @@
 
 | Date | Branch | Outcome | Runtime | Where |
 |------|--------|---------|---------|-------|
+| 2026-05-01 | main | ✅ pass (72/73 parallel local; 1 known flake on studio.spec delete-image, retry-handled in CI) | 1.9 min local | Phase 3b mobile pass shipped — `tests/e2e/mobile.spec.ts` (9 tests). No CSS fixes needed; existing responsive Tailwind patterns held. Scheduled-routine cleanup (disabled). |
 | 2026-04-30 | main | ✅ pass (62/62 CI parallel; cap stress tests skipped) | 3.5 min CI / 1.9 min local | Phase 3a — per-worker storageState fixture (`tests/e2e/auth-fixture.ts`). 8 specs migrated, auto-on-push CI re-enabled. Cap tests `test.skip(!!process.env.CI, ...)` — too aggressive for CI parallel contention, kept locally for release verification. |
 | 2026-04-30 | main | ✅ pass (64/64 sequential) | 4.8 min | local (Phase 2 — Studio breadth: studio_outputs superset + copy drafter + voice-over + tool grid + 13 new/changed tests). Sequential mode only — parallel still hits the documented per-test-signup race; Phase 3 will fix. |
 | 2026-04-30 | main | ✅ pass (51/51 sequential, parallel flakes ongoing) | 7.0 min | local (Phase 1 — coach × studio: tool-using coach + memory-aware Studio + activity strip + 6 new tests). Sequential mode (`--workers=1`) clean; parallel run flakes the same Supabase-rate-limit/per-test-signup pattern documented earlier. Phase 3 will fix via per-worker storageState. |
