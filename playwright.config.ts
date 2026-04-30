@@ -27,13 +27,21 @@ export default defineConfig({
     },
   ],
   webServer: {
-    // In CI we run against the production build (`npm run start`) so tests
-    // exercise the same code Vercel deploys. Locally we use the dev server
-    // for hot-reload speed.
-    command: isCI ? "npm run start" : "npm run dev",
+    // Always use the production build for tests — both CI and local. Dev
+    // mode's on-demand route compilation adds 10–30s per first-touch,
+    // which dominates a full-suite run. The production build is cached
+    // incrementally in .next/, so subsequent runs are fast.
+    //
+    // If you have `npm run dev` already running on port 3000 (e.g. for
+    // manual testing), Playwright reuses that server locally
+    // (reuseExistingServer below) — no rebuild needed.
+    command: "npm run build && npm run start",
     url: baseURL,
     reuseExistingServer: !isCI,
-    timeout: 120_000,
+    // Cold first-time build can be slow on Windows + OneDrive (filesystem
+    // sync overhead). Bump the timeout so a freshly-cloned repo doesn't
+    // fail the first test run.
+    timeout: 180_000,
     stdout: "ignore",
     stderr: "pipe",
     // Tells the app to use deterministic mock responses instead of calling
@@ -41,6 +49,8 @@ export default defineConfig({
     // `npm run dev` (where you want a real coach for manual testing).
     env: {
       E2E_TEST_MODE: "true",
+      // The build step needs the public Supabase env vars to run; mock-
+      // mode flags handle the rest at runtime.
     },
   },
 });
