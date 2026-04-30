@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
 import ReactMarkdown from "react-markdown";
 import type { Message, Suggestion } from "@/types/coach";
 import { regenerateLastResponse } from "./conversation-actions";
@@ -9,17 +11,38 @@ import { SuggestionTray } from "./SuggestionTray";
 
 interface CoachProps {
   conversationId: string;
+  projectId: string;
   initialMessages: Message[];
+  /**
+   * If set, the Coach textarea is pre-populated with this string on mount and
+   * focus jumps to it. Used by the "Refine with coach" button on the Studio
+   * form and by tool-using suggestions that route to the coach.
+   *
+   * Never auto-sent — wholesome charter (suggestions are invitations, not
+   * paths). The user must explicitly click Send.
+   */
+  prefill?: string | null;
 }
 
 interface UIMessage extends Message {
   /** Local-only flag set true while a stream is filling in this message. */
   streaming?: boolean;
+  /**
+   * Local-only flag set on the transient bubble shown between tool_started
+   * and tool_result events: renders as "Generating image…" instead of empty
+   * markdown. Replaced by the persisted tool-result message on tool_result.
+   */
+  toolPlaceholder?: boolean;
 }
 
-export function Coach({ conversationId, initialMessages }: CoachProps) {
+export function Coach({
+  conversationId,
+  projectId,
+  initialMessages,
+  prefill,
+}: CoachProps) {
   const [messages, setMessages] = useState<UIMessage[]>(initialMessages);
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState(prefill ?? "");
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastSubmittedMessage, setLastSubmittedMessage] = useState<string | null>(
@@ -62,6 +85,32 @@ export function Coach({ conversationId, initialMessages }: CoachProps) {
       void fetchSuggestions();
     }
   }, [fetchSuggestions, initialMessages.length]);
+
+  // Consume URL prefill once on mount: focus the textarea, scroll into view,
+  // and strip ?prefill= from the URL so reloads don't re-fill.
+  useEffect(() => {
+    if (prefill) {
+      setTimeout(() => {
+        textareaRef.current?.focus();
+        textareaRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+        try {
+          const len = prefill.length;
+          textareaRef.current?.setSelectionRange(len, len);
+        } catch {
+          // ignore
+        }
+      }, 0);
+      const url = new URL(window.location.href);
+      if (url.searchParams.has("prefill")) {
+        url.searchParams.delete("prefill");
+        router.replace(url.pathname + url.search);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function handleSuggestionSelect(prompt: string) {
     setInput(prompt);
@@ -111,6 +160,11 @@ export function Coach({ conversationId, initialMessages }: CoachProps) {
     };
 
     setMessages((prev) => [...prev, optimisticUser, placeholderAssistant]);
+
+    // Tracks the second placeholder we add when a tool is invoked
+    // (between tool_started and tool_result/tool_failed). Captured in
+    // closure so each SSE event can find it.
+    let toolPlaceholderId: string | null = null;
 
     try {
       const res = await fetch("/api/coach/stream", {
@@ -173,6 +227,97 @@ export function Coach({ conversationId, initialMessages }: CoachProps) {
                   : m,
               ),
             );
+          } else if (eventName === "tool_started") {
+            const payload = parsed as {
+              tool_use_id: string;
+              name: string;
+              message: Message | null;
+            };
+            const newToolId = `streaming-tool-${Date.now()}-${Math.random()
+              .toString(16)
+              .slice(2, 8)}`;
+            toolPlaceholderId = newToolId;
+            setMessages((prev) => {
+              const replaced = payload.message
+                ? prev.map((m) =>
+                    m.id === placeholderId
+                      ? {
+                          ...m,
+                          ...payload.message!,
+                          streaming: false,
+                        }
+                      : m,
+                  )
+                : prev.map((m) =>
+                    m.id === placeholderId ? { ...m, streaming: false } : m,
+                  );
+              return [
+                ...replaced,
+                {
+                  id: newToolId,
+                  role: "assistant",
+                  content: "",
+                  created_at: new Date().toISOString(),
+                  streaming: true,
+                  toolPlaceholder: true,
+                  tool_call: {
+                    tool_use_id: payload.tool_use_id,
+                    name: payload.name,
+                    input: {},
+                  },
+                } as UIMessage,
+              ];
+            });
+          } else if (eventName === "tool_result") {
+            const payload = parsed as {
+              tool_use_id: string;
+              message: Message | null;
+            };
+            const targetId = toolPlaceholderId;
+            if (targetId && payload.message) {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === targetId
+                    ? {
+                        ...m,
+                        ...payload.message!,
+                        streaming: false,
+                        toolPlaceholder: false,
+                      }
+                    : m,
+                ),
+              );
+            }
+          } else if (eventName === "tool_failed") {
+            const payload = parsed as {
+              tool_use_id: string;
+              error: string;
+              message: Message | null;
+            };
+            const targetId = toolPlaceholderId;
+            if (targetId) {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === targetId
+                    ? payload.message
+                      ? {
+                          ...m,
+                          ...payload.message,
+                          streaming: false,
+                          partial: true,
+                          toolPlaceholder: false,
+                        }
+                      : {
+                          ...m,
+                          content: `[Image generation failed: ${payload.error ?? "unknown error"}]`,
+                          streaming: false,
+                          partial: true,
+                          toolPlaceholder: false,
+                        }
+                    : m,
+                ),
+              );
+            }
           } else if (eventName === "done") {
             const payload = parsed as {
               message: Message | null;
@@ -314,6 +459,7 @@ export function Coach({ conversationId, initialMessages }: CoachProps) {
               <MessageBubble
                 key={m.id}
                 message={m}
+                projectId={projectId}
                 isCopied={copiedMessageId === m.id}
                 onCopy={() => handleCopy(m.id, m.content)}
                 onRegenerate={
@@ -321,6 +467,7 @@ export function Coach({ conversationId, initialMessages }: CoachProps) {
                     ? () => handleRegenerate(m.id)
                     : undefined
                 }
+                onRetry={() => void handleRetry()}
                 disableActions={isStreaming}
               />
             ))}
@@ -348,6 +495,7 @@ export function Coach({ conversationId, initialMessages }: CoachProps) {
         suggestions={suggestions}
         isLoading={isLoadingSuggestions}
         disabled={isStreaming}
+        projectId={projectId}
         onSelect={handleSuggestionSelect}
         onRefresh={() => void fetchSuggestions()}
       />
@@ -389,23 +537,38 @@ export function Coach({ conversationId, initialMessages }: CoachProps) {
 
 interface MessageBubbleProps {
   message: UIMessage;
+  projectId: string;
   isCopied: boolean;
   onCopy: () => void;
   onRegenerate?: () => void;
+  onRetry: () => void;
   disableActions: boolean;
 }
 
 function MessageBubble({
   message,
+  projectId,
   isCopied,
   onCopy,
   onRegenerate,
+  onRetry,
   disableActions,
 }: MessageBubbleProps) {
   const isUser = message.role === "user";
   const isStreaming = message.streaming === true;
   const isPartial = message.partial === true;
-  const isEmpty = message.content.trim().length === 0;
+  // Defensive: server-saved messages always have a string content (empty
+  // string for tool-result rows), but a flaky insert + tolerant SSE
+  // handler could deliver an undefined here. Treat it as empty.
+  const safeContent = message.content ?? "";
+  const isEmpty = safeContent.trim().length === 0;
+  const isToolPlaceholder = message.toolPlaceholder === true;
+  const studioImage = message.studio_image ?? null;
+  const isToolResult = !isUser && !!studioImage;
+  const isToolFailure =
+    !isUser &&
+    isPartial &&
+    safeContent.startsWith("[Image generation failed");
 
   const timestamp = new Date(message.created_at).toLocaleString("en-US", {
     month: "short",
@@ -414,8 +577,12 @@ function MessageBubble({
     minute: "2-digit",
   });
 
-  // Hide actions while this specific message is streaming OR while it's empty.
-  const showActions = !isStreaming && !isEmpty;
+  // Hide the Copy/Regenerate action row on:
+  // - streaming messages (still in flight),
+  // - empty messages (placeholders, tool-result image bubbles),
+  // - tool placeholders + tool failures (have their own UX).
+  const showActions =
+    !isStreaming && !isEmpty && !isToolPlaceholder && !isToolFailure;
 
   return (
     <div
@@ -428,22 +595,74 @@ function MessageBubble({
         className={`max-w-[85%] rounded-lg px-3 py-2 text-sm sm:max-w-[75%] ${
           isUser
             ? "whitespace-pre-wrap bg-black text-white dark:bg-white dark:text-black"
-            : "bg-zinc-100 text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100"
+            : isToolFailure
+              ? "border border-red-500/30 bg-red-50 text-red-900 dark:bg-red-950/30 dark:text-red-200"
+              : "bg-zinc-100 text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100"
         }`}
         title={timestamp}
+        data-coach-tool-placeholder={isToolPlaceholder ? "true" : undefined}
+        data-coach-tool-failed={isToolFailure ? "true" : undefined}
       >
         {isUser ? (
-          message.content
+          safeContent
+        ) : isToolPlaceholder ? (
+          <span
+            className="flex items-center gap-2 italic text-zinc-500"
+            data-coach-tool-loading="true"
+          >
+            <StreamingCursor />
+            <span>Generating image…</span>
+          </span>
+        ) : isToolResult && studioImage ? (
+          <Link
+            href={`/projects/${projectId}?tab=studio`}
+            className="block"
+            data-coach-tool-image={studioImage.id}
+          >
+            <span className="relative block aspect-square w-full max-w-[256px] overflow-hidden rounded-md border border-zinc-300/40 bg-zinc-200 dark:border-zinc-700/40 dark:bg-zinc-800">
+              <Image
+                src={studioImage.signed_url}
+                alt={studioImage.prompt}
+                fill
+                unoptimized
+                sizes="256px"
+                className="object-cover"
+              />
+            </span>
+            {studioImage.prompt && (
+              <p className="mt-1.5 max-w-[256px] text-xs italic opacity-70">
+                {studioImage.prompt}
+              </p>
+            )}
+          </Link>
+        ) : isToolFailure ? (
+          <div className="space-y-2">
+            <p className="font-medium">Image generation failed.</p>
+            <p className="text-xs opacity-80">
+              {safeContent
+                .replace(/^\[Image generation failed:\s*/, "")
+                .replace(/\]$/, "")}
+            </p>
+            <button
+              type="button"
+              onClick={onRetry}
+              disabled={disableActions}
+              data-coach-tool-retry="true"
+              className="rounded border border-red-500/40 bg-white px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:bg-zinc-950 dark:text-red-400 dark:hover:bg-red-950/30"
+            >
+              Retry
+            </button>
+          </div>
         ) : isStreaming && isEmpty ? (
           <span className="italic text-zinc-500">Coach is thinking…</span>
         ) : (
           <>
-            <CoachMarkdown content={message.content} />
+            <CoachMarkdown content={safeContent} />
             {isStreaming && <StreamingCursor />}
           </>
         )}
 
-        {isPartial && !isStreaming && (
+        {isPartial && !isStreaming && !isToolFailure && (
           <p className="mt-2 text-xs italic opacity-70">
             Response was interrupted.
           </p>

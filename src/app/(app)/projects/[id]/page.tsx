@@ -15,6 +15,7 @@ import {
 import { ProjectTabs, type ProjectTab } from "./ProjectTabs";
 import { Memory } from "./Memory";
 import { Studio } from "./Studio";
+import { RecentActivityStrip } from "@/components/RecentActivityStrip";
 import type { StudioImage } from "@/types/studio";
 
 export default async function ProjectDetailPage({
@@ -22,11 +23,18 @@ export default async function ProjectDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ conversation?: string; tab?: string }>;
+  searchParams: Promise<{
+    conversation?: string;
+    tab?: string;
+    prefill?: string;
+  }>;
 }) {
   const { id } = await params;
-  const { conversation: requestedConversationId, tab: requestedTab } =
-    await searchParams;
+  const {
+    conversation: requestedConversationId,
+    tab: requestedTab,
+    prefill: requestedPrefill,
+  } = await searchParams;
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -79,15 +87,45 @@ export default async function ProjectDetailPage({
     }
   }
 
-  // Load messages for the current conversation (Coach tab needs these)
+  // Load messages for the current conversation (Coach tab needs these).
+  // Fetch tool_call + studio_image_id so tool-using turns render correctly,
+  // and hydrate signed URLs for any tool-result messages.
   let initialMessages: Message[] = [];
   if (currentConversationId) {
     const { data: messageRows } = await supabase
       .from("messages")
-      .select("id, role, content, partial, created_at")
+      .select(
+        "id, role, content, partial, tool_call, studio_image_id, created_at",
+      )
       .eq("conversation_id", currentConversationId)
       .order("created_at", { ascending: true });
-    initialMessages = (messageRows ?? []) as Message[];
+
+    const rows = (messageRows ?? []) as Message[];
+
+    // For each message that has a studio_image_id, fetch the image row +
+    // create a fresh signed URL so the bubble can render without a roundtrip.
+    initialMessages = await Promise.all(
+      rows.map(async (m) => {
+        if (!m.studio_image_id) return m;
+        const { data: imgRow } = await supabase
+          .from("studio_images")
+          .select("id, prompt, storage_path")
+          .eq("id", m.studio_image_id)
+          .maybeSingle();
+        if (!imgRow) return m;
+        const { data: signed } = await supabase.storage
+          .from("studio-images")
+          .createSignedUrl(imgRow.storage_path, 60 * 60);
+        return {
+          ...m,
+          studio_image: {
+            id: imgRow.id,
+            prompt: imgRow.prompt,
+            signed_url: signed?.signedUrl ?? "",
+          },
+        };
+      }),
+    );
   }
 
   // Load project facts (always — used for tab badge + Memory tab)
@@ -136,6 +174,38 @@ export default async function ProjectDetailPage({
       },
     ),
   );
+
+  // Build the recent-activity strip's conversation pointer: pull the most
+  // recent assistant message across this project's conversations and use
+  // its content as a one-line preview.
+  let recentConversation: {
+    id: string;
+    title: string | null;
+    preview: string | null;
+    updated_at: string;
+  } | null = null;
+  if (conversations.length > 0) {
+    const topConv = conversations[0];
+    const { data: lastMsg } = await supabase
+      .from("messages")
+      .select("content, role")
+      .eq("conversation_id", topConv.id)
+      .eq("role", "assistant")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const previewRaw = (lastMsg?.content ?? "").trim();
+    recentConversation = {
+      id: topConv.id,
+      title: topConv.title ?? null,
+      preview: previewRaw
+        ? previewRaw.length > 80
+          ? previewRaw.slice(0, 79).trimEnd() + "…"
+          : previewRaw
+        : null,
+      updated_at: topConv.updated_at,
+    };
+  }
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">
@@ -196,6 +266,12 @@ export default async function ProjectDetailPage({
         </div>
       </dl>
 
+      <RecentActivityStrip
+        projectId={project.id}
+        recentImages={studioImages.slice(0, 3)}
+        recentConversation={recentConversation}
+      />
+
       <section className="mt-8">
         <ProjectTabs
           projectId={project.id}
@@ -219,7 +295,9 @@ export default async function ProjectDetailPage({
                   <Coach
                     key={currentConversationId}
                     conversationId={currentConversationId}
+                    projectId={project.id}
                     initialMessages={initialMessages}
+                    prefill={requestedPrefill ?? null}
                   />
                 ) : (
                   <p className="rounded-lg border border-dashed border-zinc-300 bg-white p-6 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-950">
@@ -236,7 +314,11 @@ export default async function ProjectDetailPage({
               isAdmin={isAdmin}
             />
           ) : (
-            <Studio projectId={project.id} images={studioImages} />
+            <Studio
+              projectId={project.id}
+              images={studioImages}
+              prefill={requestedPrefill ?? null}
+            />
           )}
         </div>
       </section>

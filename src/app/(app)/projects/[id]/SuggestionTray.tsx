@@ -1,11 +1,14 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import type { Suggestion } from "@/types/coach";
 
 interface SuggestionTrayProps {
   suggestions: Suggestion[];
   isLoading: boolean;
   disabled: boolean;
+  projectId: string;
+  /** Called for default-action ("coach") suggestions: fills the textarea. */
   onSelect: (prompt: string) => void;
   onRefresh: () => void;
 }
@@ -14,9 +17,22 @@ export function SuggestionTray({
   suggestions,
   isLoading,
   disabled,
+  projectId,
   onSelect,
   onRefresh,
 }: SuggestionTrayProps) {
+  const router = useRouter();
+
+  function handleClick(s: Suggestion) {
+    if (s.action === "studio.image") {
+      const params = new URLSearchParams();
+      params.set("tab", "studio");
+      params.set("prefill", s.prompt);
+      router.push(`/projects/${projectId}?${params.toString()}`);
+      return;
+    }
+    onSelect(s.prompt);
+  }
   // Render nothing when there are no suggestions and we're not loading —
   // keeps the empty/fresh-thread state from showing tray clutter.
   if (!isLoading && suggestions.length === 0) return null;
@@ -50,18 +66,31 @@ export function SuggestionTray({
                 className="h-7 w-32 animate-pulse rounded-full bg-zinc-100 dark:bg-zinc-900"
               />
             ))
-          : suggestions.map((s, i) => (
-              <button
-                key={`${i}-${s.label}`}
-                type="button"
-                onClick={() => onSelect(s.prompt)}
-                disabled={disabled}
-                data-suggestion-index={i}
-                className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-medium text-zinc-700 transition-colors hover:border-zinc-400 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
-              >
-                {s.label}
-              </button>
-            ))}
+          : suggestions.map((s, i) => {
+              const isStudioImage = s.action === "studio.image";
+              return (
+                <button
+                  key={`${i}-${s.label}`}
+                  type="button"
+                  onClick={() => handleClick(s)}
+                  disabled={disabled}
+                  data-suggestion-index={i}
+                  data-suggestion-action={s.action ?? "coach"}
+                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                    isStudioImage
+                      ? "border-amber-300 bg-amber-50 text-amber-900 hover:border-amber-500 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200 dark:hover:border-amber-500 dark:hover:bg-amber-950/50"
+                      : "border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-zinc-400 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
+                  }`}
+                >
+                  {isStudioImage && (
+                    <span aria-hidden className="mr-1">
+                      ✶
+                    </span>
+                  )}
+                  {s.label}
+                </button>
+              );
+            })}
       </div>
     </div>
   );

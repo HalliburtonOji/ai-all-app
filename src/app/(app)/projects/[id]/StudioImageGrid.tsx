@@ -59,6 +59,7 @@ function StudioImageTile({
     <li
       data-studio-image-id={image.id}
       data-studio-image-index={index}
+      data-studio-image-model={image.model}
       className="group overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
     >
       <div className="relative aspect-square w-full bg-zinc-100 dark:bg-zinc-900">

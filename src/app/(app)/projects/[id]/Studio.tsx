@@ -5,9 +5,10 @@ import { StudioImageGrid } from "./StudioImageGrid";
 interface StudioProps {
   projectId: string;
   images: StudioImage[];
+  prefill?: string | null;
 }
 
-export function Studio({ projectId, images }: StudioProps) {
+export function Studio({ projectId, images, prefill }: StudioProps) {
   return (
     <section
       data-studio-panel="true"
@@ -22,7 +23,7 @@ export function Studio({ projectId, images }: StudioProps) {
           only to you.
         </p>
       </div>
-      <StudioGenerateForm projectId={projectId} />
+      <StudioGenerateForm projectId={projectId} prefill={prefill} />
       <StudioImageGrid projectId={projectId} images={images} />
     </section>
   );

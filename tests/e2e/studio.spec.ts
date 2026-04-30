@@ -133,4 +133,33 @@ test.describe("Studio v1 — image generation", () => {
     await page.goto(`/projects/${projectId}`);
     await expect(page.locator("[data-studio-image-id]")).toHaveCount(0);
   });
+
+  test("memory-aware: when project has facts, generated tile records 'mock-with-context'", async ({
+    page,
+  }) => {
+    await signUpNewUser(page);
+    const projectId = await createProject(page, {
+      name: "Memory-aware studio",
+      type: "channel",
+    });
+
+    // Seed a project_fact via the admin extract button on the Memory tab.
+    await page.goto(`/projects/${projectId}?tab=memory`);
+    await page.locator('[data-extract-button="true"]').click();
+    await expect(page.locator("[data-fact-id]").first()).toBeVisible({
+      timeout: 10_000,
+    });
+
+    // Generate an image — helper should detect the fact + flag it on the row.
+    await page.goto(`/projects/${projectId}?tab=studio`);
+    await page.getByLabel("Image prompt").fill("memory-aware portrait");
+    await page.locator('[data-studio-generate-button="true"]').click();
+
+    const tile = page.locator("[data-studio-image-id]").first();
+    await expect(tile).toBeVisible({ timeout: 15_000 });
+    await expect(tile).toHaveAttribute(
+      "data-studio-image-model",
+      "mock-with-context",
+    );
+  });
 });

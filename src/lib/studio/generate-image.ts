@@ -30,14 +30,27 @@ export interface GenerateImageResult {
  * this helper handles the Replicate call, the PNG upload to Supabase
  * Storage, and the studio_images row insert.
  *
+ * `memoryHint` (optional) is a compact string of remembered project /
+ * user context (built via `buildStudioMemoryHint`). When present it's
+ * appended to the user's prompt as "Project context: …" before being
+ * sent to FLUX, so generated images respect remembered facts about
+ * audience / style / project intent.
+ *
  * In E2E_TEST_MODE this skips Replicate but still exercises Storage +
- * DB so tests are deterministic and free.
+ * DB so tests are deterministic and free. Test-mode `model` field
+ * flips to "mock-with-context" when a hint was applied, so tests can
+ * assert memory injection happened end-to-end.
+ *
+ * Special test-only failure path: when E2E_TEST_MODE and `prompt`
+ * contains "__fail__", returns an error immediately without any DB
+ * write — used to test the tool-failure UX.
  */
 export async function generateImageForProject(
   supabase: SupabaseClient,
   userId: string,
   projectId: string,
   prompt: string,
+  memoryHint?: string | null,
 ): Promise<GenerateImageResult> {
   const trimmed = prompt.trim();
   if (trimmed.length === 0) {
@@ -47,6 +60,18 @@ export async function generateImageForProject(
     return { error: `Prompt exceeds ${MAX_PROMPT_LENGTH} characters` };
   }
 
+  if (
+    process.env.E2E_TEST_MODE === "true" &&
+    trimmed.includes("__fail__")
+  ) {
+    return { error: "Forced test failure" };
+  }
+
+  const hint = memoryHint?.trim() || null;
+  const finalPrompt = hint
+    ? `${trimmed}. Project context: ${hint}`
+    : trimmed;
+
   const imageId = randomUUID();
   const storagePath = `${userId}/${projectId}/${imageId}.png`;
 
@@ -55,7 +80,7 @@ export async function generateImageForProject(
 
   if (process.env.E2E_TEST_MODE === "true") {
     pngBytes = MOCK_PNG;
-    modelLabel = "mock";
+    modelLabel = hint ? "mock-with-context" : "mock";
   } else {
     const apiToken = process.env.REPLICATE_API_TOKEN;
     if (!apiToken) {
@@ -66,7 +91,7 @@ export async function generateImageForProject(
       const replicate = new Replicate({ auth: apiToken });
       const output = (await replicate.run(MODEL, {
         input: {
-          prompt: trimmed,
+          prompt: finalPrompt,
           aspect_ratio: "1:1",
           output_format: "png",
           num_outputs: 1,

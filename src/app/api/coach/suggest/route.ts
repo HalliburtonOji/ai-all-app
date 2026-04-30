@@ -14,11 +14,22 @@ const MAX_TOKENS = 512;
 const RECENT_MESSAGES_WINDOW = 10;
 
 // Deterministic mock suggestions for E2E_TEST_MODE. Tests assert the count
-// and that clicking fills the input with one of these prompts.
+// and that clicking either fills the chat input or routes to Studio with a
+// pre-fill (for action="studio.image").
 const MOCK_SUGGESTIONS: Suggestion[] = [
-  { label: "Draft a first hook", prompt: "Help me draft a first hook for the next video." },
-  { label: "Map this week", prompt: "Map out what I should ship this week." },
-  { label: "Audit my last post", prompt: "Audit my last post — what worked, what didn't?" },
+  {
+    label: "Draft a first hook",
+    prompt: "Help me draft a first hook for the next video.",
+  },
+  {
+    label: "Sketch a thumbnail",
+    prompt: "A bold thumbnail with bright colors and a curious facial expression.",
+    action: "studio.image",
+  },
+  {
+    label: "Audit my last post",
+    prompt: "Audit my last post — what worked, what didn't?",
+  },
 ];
 
 function jsonError(error: string, status: number) {

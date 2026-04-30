@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { generateImageForProject } from "@/lib/studio/generate-image";
+import { buildStudioMemoryHint } from "@/lib/coach/build-memory";
+import type { ProjectFact, UserFact } from "@/types/coach";
 
 const BUCKET = "studio-images";
 const MAX_PROMPT_LENGTH = 1000;
@@ -39,11 +41,36 @@ export async function generateImage(
     return { error: "Project not found" };
   }
 
+  // Load memory facts so the image is informed by what the coach
+  // already remembers about this project + this user. The hint is
+  // capped at 200 chars to avoid blowing FLUX's prompt window.
+  const [{ data: pfRows }, { data: ufRows }] = await Promise.all([
+    supabase
+      .from("project_facts")
+      .select("id, fact, pinned, created_at")
+      .eq("project_id", projectId)
+      .order("pinned", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(10),
+    supabase
+      .from("user_facts")
+      .select("id, fact, pinned, created_at")
+      .eq("user_id", user.id)
+      .order("pinned", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(10),
+  ]);
+  const memoryHint = buildStudioMemoryHint(
+    (pfRows ?? []) as ProjectFact[],
+    (ufRows ?? []) as UserFact[],
+  );
+
   const result = await generateImageForProject(
     supabase,
     user.id,
     projectId,
     prompt,
+    memoryHint,
   );
 
   if (result.error) {
