@@ -20,6 +20,14 @@ jobs:
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
       E2E_TEST_MODE: "true"
+      # The cron-secret test exercises the auth check on /api/cron/extract-facts:
+      # without a Bearer header, we expect 401. The route otherwise returns 500
+      # if CRON_SECRET isn't set at all (treats it as a misconfigured server).
+      # Any non-empty value works for tests — they don't actually call cron.
+      CRON_SECRET: "test-cron-secret-not-real"
+      # The admin-extract test mode bypass already triggers on E2E_TEST_MODE,
+      # but setting this anyway keeps prod and CI shapes parallel.
+      ADMIN_USER_ID: "00000000-0000-0000-0000-000000000000"
 
     steps:
       - name: Checkout repository

@@ -172,7 +172,10 @@ test.describe("User-level memory (cross-project)", () => {
     const extractBtn = page.locator('[data-extract-user-facts-button="true"]');
     for (let i = 0; i < 101; i++) {
       await extractBtn.click();
-      await expect(extractBtn).toBeEnabled({ timeout: 10_000 });
+      // 20s per click absorbs Linux-CI jitter; locally each click resolves
+      // in well under 1s. 101 clicks × ~500ms = ~50s, well under the
+      // 3-min test budget set above.
+      await expect(extractBtn).toBeEnabled({ timeout: 20_000 });
     }
 
     await page.reload();
