@@ -62,6 +62,7 @@ export async function generateVoiceOverForProject(
   script: string,
   voiceId: string = DEFAULT_VOICE_ID,
   memoryHint?: string | null,
+  apiKeyOverride?: string | null,
 ): Promise<GenerateVoiceResult> {
   const trimmed = script.trim();
   if (trimmed.length === 0) {
@@ -96,7 +97,7 @@ export async function generateVoiceOverForProject(
     mp3Bytes = MOCK_MP3;
     modelLabel = hint ? "mock-audio-with-context" : "mock-audio";
   } else {
-    const apiKey = process.env.ELEVENLABS_API_KEY;
+    const apiKey = apiKeyOverride ?? process.env.ELEVENLABS_API_KEY;
     if (!apiKey) {
       return { error: "ELEVENLABS_API_KEY not configured on server" };
     }
@@ -125,7 +126,7 @@ export async function generateVoiceOverForProject(
       }
       const arrayBuffer = await resp.arrayBuffer();
       mp3Bytes = new Uint8Array(arrayBuffer);
-      modelLabel = MODEL;
+      modelLabel = apiKeyOverride ? `${MODEL}-byok` : MODEL;
     } catch (e) {
       const msg = e instanceof Error ? e.message : "ElevenLabs call failed";
       return { error: msg };

@@ -9,6 +9,7 @@ import {
 } from "@/lib/studio/generate-text";
 import { generateVoiceOverForProject } from "@/lib/studio/generate-voice";
 import { buildStudioMemoryHint } from "@/lib/coach/build-memory";
+import { getUserApiKey } from "@/lib/byok/get-key";
 import type { ProjectFact, UserFact } from "@/types/coach";
 
 const BUCKET = "studio-images";
@@ -102,12 +103,14 @@ export async function generateImage(
   if ("error" in ctx) return { error: ctx.error };
 
   const supabase = await createClient();
+  const userKey = await getUserApiKey(supabase, "replicate");
   const result = await generateImageForProject(
     supabase,
     ctx.ownership.userId,
     projectId,
     prompt,
     ctx.memoryHint,
+    userKey,
   );
 
   if (result.error) return { error: result.error };
@@ -142,6 +145,7 @@ export async function generateTextDraft(
   if ("error" in ctx) return { error: ctx.error };
 
   const supabase = await createClient();
+  const userKey = await getUserApiKey(supabase, "anthropic");
   const result = await generateTextDraftForProject(
     supabase,
     ctx.ownership.userId,
@@ -149,6 +153,7 @@ export async function generateTextDraft(
     prompt,
     kindHint,
     ctx.memoryHint,
+    userKey,
   );
 
   if (result.error) return { error: result.error };
@@ -182,6 +187,7 @@ export async function generateVoiceOver(
   if ("error" in ctx) return { error: ctx.error };
 
   const supabase = await createClient();
+  const userKey = await getUserApiKey(supabase, "elevenlabs");
   const result = await generateVoiceOverForProject(
     supabase,
     ctx.ownership.userId,
@@ -189,6 +195,7 @@ export async function generateVoiceOver(
     script,
     voiceId,
     ctx.memoryHint,
+    userKey,
   );
 
   if (result.error) return { error: result.error };

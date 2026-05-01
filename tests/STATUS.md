@@ -1,6 +1,6 @@
 # Test Health Status
 
-**Last updated:** 2026-05-01 (post-Phase-6 polish: lessons at full 12, mobile + a11y extended to new routes, color-contrast fix on lesson player)
+**Last updated:** 2026-05-01 (Phase 7 shipped — BYOK: user-supplied API keys for Anthropic / Replicate / ElevenLabs)
 
 ## Coverage by Feature
 
@@ -28,6 +28,7 @@
 | Phase 6a — welcome flow: dashboard banner appears + clicks to /welcome, full wizard happy path lands user on first project, skip is harmless | 3 | 2026-05-01 | Banner only renders for users with zero `user_facts`. Wizard saves answers as **pinned** facts so they survive the 100-fact cap. Skip button on every screen — robustness bar requires the whole flow be optional. |
 | Phase 6b — wins feed: public output appears on `/wins` to anonymous viewers, like-toggle (count + state) works for authenticated users, /api/wins/like rejects unauthenticated callers | 3 | 2026-05-01 | Public route — service-role admin client assembles the feed (usernames + signed URLs). New `output_likes` table with anyone-SELECT + owner-only-INSERT/DELETE policies. Like button is disabled for anonymous viewers (with tooltip explaining why). |
 | Phase 6c — failure forum: post + read + delete a failure note, anonymous viewer redirected to /login on `/community/failures` | 2 | 2026-05-01 | Auth-gated. New `failure_notes` table with auth-required-SELECT + owner-only-INSERT/DELETE policies. **5-posts-per-24h-rolling-window rate limit** enforced server-side in the action. The 24h cap is a self-pacing nudge, not a hard quota — failure deserves time to settle. |
+| Phase 7 — BYOK: save Anthropic key + redacted display + reload, mock `[byok]` marker once user has a key, delete reverts to platform-key state, RLS cross-user, /me/keys redirects unauthenticated | 5 | 2026-05-01 | AES-256-GCM at rest with key derived from `SUPABASE_SERVICE_ROLE_KEY`. Plaintext never reaches the browser — server-side redaction returns last 4 chars + recognised prefix only. The mock-mode `[byok]` suffix on the chatty mock branch lets the spec assert the resolver was actually consulted. |
 
 ## Untested by Design
 
@@ -65,6 +66,7 @@
 
 | Date | Branch | Outcome | Runtime | Where |
 |------|--------|---------|---------|-------|
+| 2026-05-01 | main | ✅ Phase 7 shipped — 5/5 byok sequential | 32s | local. Caught + fixed a nested-`<form>` bug (delete confirm form was inside the save form; browsers strip nested forms so the confirm submitted the save action). Hoisted to a sibling. |
 | 2026-05-01 | main | ✅ Post-Phase-6 polish — 12 lessons total, mobile + a11y sweep extended to all new routes (29 + 1 fixed contrast); 122 E2E tests | 1.2 min | local. Caught + fixed a real accessibility violation while the sweep was being added (emerald-600 button bg). |
 | 2026-05-01 | main | ✅ Phase 6 shipped — 8/8 onboarding-community sequential | 42s | local — targeted spec only (autonomous run; Halli was away). Welcome + wins + failure forum all green on first try. |
 | 2026-05-01 | main | ✅ Phase 5 shipped — 7/7 learn sequential (1 flaky, passed on retry) | 53s | local — targeted spec only. Found + fixed Next.js 16 "no revalidatePath during render" bug while writing the spec. |

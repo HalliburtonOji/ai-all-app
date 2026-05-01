@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/utils/supabase/server";
+import { getUserApiKey } from "@/lib/byok/get-key";
 import { COACH_SYSTEM_PROMPT } from "@/lib/coach/system-prompt";
 import { buildProjectContext } from "@/lib/coach/build-context";
 import {
@@ -202,6 +203,13 @@ export async function POST(request: Request) {
             memoryFacts.length > 0 ? ` [memory: ${memoryFacts.length}]` : "";
           const userMemorySuffix =
             userFacts.length > 0 ? ` [user-memory: ${userFacts.length}]` : "";
+          // BYOK marker: mock mode also surfaces whether the user has
+          // an Anthropic key on file. Lets the spec assert that the
+          // BYOK resolver was actually consulted, without the spec
+          // needing a real API call.
+          const byokKey = await getUserApiKey(supabase, "anthropic");
+          const byokSuffix = byokKey ? " [byok]" : "";
+          modelUsed = byokKey ? "mock-byok" : "mock";
 
           // Pricing intent fires BEFORE tool selection so "what should
           // I charge for a logo?" lands as a pricing question rather
@@ -298,6 +306,7 @@ export async function POST(request: Request) {
               trimmed.length > 25 ? trimmed.slice(25, 50) : "",
               memorySuffix,
               userMemorySuffix,
+              byokSuffix,
             ].filter((c) => c.length > 0);
             for (const chunk of chunks) {
               fullContent += chunk;
@@ -306,7 +315,11 @@ export async function POST(request: Request) {
             }
           }
         } else {
-          const apiKey = process.env.ANTHROPIC_API_KEY;
+          // Prefer the user's BYOK key if they've set one; fall back
+          // to the platform key. modelUsed gets a `-byok` suffix on
+          // the user-key path for observability.
+          const userKey = await getUserApiKey(supabase, "anthropic");
+          const apiKey = userKey ?? process.env.ANTHROPIC_API_KEY;
           if (!apiKey) {
             controller.enqueue(
               frame("error", {
@@ -317,7 +330,7 @@ export async function POST(request: Request) {
             return;
           }
 
-          modelUsed = MODEL;
+          modelUsed = userKey ? `${MODEL}-byok` : MODEL;
           const client = new Anthropic({ apiKey });
           const memoryContext = buildMemoryContext(memoryFacts);
           const userMemoryContext = buildUserMemoryContext(userFacts);
@@ -523,7 +536,14 @@ export async function POST(request: Request) {
                 const words = trimmed.split(/\s+/).slice(0, 3).join(" ");
                 newTitle = `Mock: ${words}`.slice(0, 60);
               } else {
-                const apiKey = process.env.ANTHROPIC_API_KEY;
+                // Auto-titling reuses the same provider preference as
+                // the main reply call.
+                const userTitleKey = await getUserApiKey(
+                  supabase,
+                  "anthropic",
+                );
+                const apiKey =
+                  userTitleKey ?? process.env.ANTHROPIC_API_KEY;
                 if (apiKey) {
                   const titleClient = new Anthropic({ apiKey });
                   const userSnippet = trimmed.slice(0, 500);

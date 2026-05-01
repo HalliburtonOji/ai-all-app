@@ -206,7 +206,8 @@ Workflow recorder, template gallery, marketplace, opportunity radar, client CRM,
 | **Onboarding flow (Phase 6a)** | `/welcome` 3-step wizard (role · goal · optional first project), saves answers as pinned `user_facts`. Dashboard banner shows for users with zero `user_facts` and naturally vanishes once any are added. Every screen is skippable. |
 | **Wins feed (Phase 6b)** | Public route `/wins` — aggregated feed of every public Studio output across all users. New `output_likes` table (anyone-SELECT for counts, owner-only INSERT/DELETE). Like button per tile, disabled for anonymous viewers. Like-toggle endpoint at `/api/wins/like`. NavBar entry. |
 | **Failure forum (Phase 6c)** | Auth-gated route `/community/failures` — community journal of things that didn't work. New `failure_notes` table (auth-only SELECT, owner-only INSERT/DELETE). 5-posts-per-24h rolling rate limit enforced server-side. Two-step delete confirm. NavBar entry. |
-| **Tests** | 122 Playwright E2E tests (62 CI parallel + 15 mobile + 15 accessibility + 4 portfolio + 6 earnings + 3 pricing + 7 learn + 8 onboarding-community + 2 cap stress local-only). Per-worker auth fixture (`tests/e2e/auth-fixture.ts`). Local full suite ~2 min parallel, CI ~3.5 min. |
+| **BYOK (Phase 7)** | Per-user API keys for Anthropic / Replicate / ElevenLabs / OpenAI. New `user_api_keys` table (owner-only RLS, AES-256-GCM at rest with key derived from `SUPABASE_SERVICE_ROLE_KEY`). `/me/keys` settings page with paste/save/delete + redacted display. Resolver `getUserApiKey` + `getEffectiveKey` consulted by every provider call site (coach stream + tutor + suggestions + image/text/voice generators). Model labels get a `-byok` suffix when the user's key was used. NavBar entry. |
+| **Tests** | 127 Playwright E2E tests (62 CI parallel + 15 mobile + 15 accessibility + 4 portfolio + 6 earnings + 3 pricing + 7 learn + 8 onboarding-community + 5 byok + 2 cap stress local-only). Per-worker auth fixture (`tests/e2e/auth-fixture.ts`). Local full suite ~2 min parallel, CI ~3.5 min. |
 | **Mobile + Accessibility** | `tests/e2e/mobile.spec.ts` (9 routes at 375px, no horizontal overflow) + `tests/e2e/accessibility.spec.ts` (axe-core, 9 routes, zero serious/critical WCAG A/AA violations). |
 | **Error monitoring** | Sentry SDK wired in (`@sentry/nextjs`, `sentry.{server,edge}.config.ts`, `instrumentation.ts`, `instrumentation-client.ts`, `next.config.ts` wrapped). DSN-gated; no-op until Halli adds `SENTRY_DSN` + `NEXT_PUBLIC_SENTRY_DSN` to Vercel. |
 | **Performance baseline** | `npm run lighthouse` audits homepage/login/signup against the live deploy. Current: homepage 96/100/100/100, login 79/100/100/100, signup 94/100/100/100. |
@@ -284,6 +285,51 @@ Same four keys as above. Used by both workflows.
 ## 14. Session Log
 
 > Add a new entry to the **top** of this list for each work session. Include: date, what shipped, decisions made, and anything left dangling.
+
+### 2026-05-01 (autonomous, the BYOK ship) — Phase 7: Bring Your Own Keys (BYOK)
+
+The app now supports per-user API keys for Anthropic, Replicate, and ElevenLabs. When a user's key is set for a provider, the app uses it for that user's requests; otherwise it falls back to the platform key. This was the original Week 7 deliverable in the 12-week plan, now landed.
+
+**Shipped:**
+- Migration [supabase/migrations/20260501165233_add_user_api_keys.sql](supabase/migrations/20260501165233_add_user_api_keys.sql): `user_api_keys` table with `(user_id, provider)` unique constraint, RLS owner-only across all CRUD ops, provider whitelist (anthropic/replicate/elevenlabs/openai), `updated_at` trigger.
+- AES-256-GCM encryption at rest in [src/lib/byok/crypto.ts](src/lib/byok/crypto.ts). Encryption key derived via `scrypt(SUPABASE_SERVICE_ROLE_KEY, "ai-all-app:byok:v1", 32)` so no new secret has to be configured. The service-role key is server-only and never reaches the browser. If it's ever rotated, ciphertexts become unreadable and users re-paste — acceptable trade-off for not introducing a separate `ENCRYPTION_KEY` env var.
+- Resolver [src/lib/byok/get-key.ts](src/lib/byok/get-key.ts) with two helpers: `getUserApiKey(supabase, provider)` (decrypted key or null) and `getEffectiveKey(supabase, provider, envFallback)` (returns `{ key, source }`).
+- Wired into every API surface that calls a provider:
+  - [src/app/api/coach/stream/route.ts](src/app/api/coach/stream/route.ts) — main reply call + auto-title call. `modelUsed` field gets a `-byok` suffix when the user's key was used (observability).
+  - [src/app/api/learn/tutor/route.ts](src/app/api/learn/tutor/route.ts) — lesson tutor mode.
+  - [src/app/api/coach/suggest/route.ts](src/app/api/coach/suggest/route.ts) — suggestions tray.
+  - [src/lib/studio/generate-image.ts](src/lib/studio/generate-image.ts) + [generate-text.ts](src/lib/studio/generate-text.ts) + [generate-voice.ts](src/lib/studio/generate-voice.ts) all gain an optional `apiKeyOverride` parameter. The Studio actions in [src/app/(app)/projects/[id]/studio-actions.ts](src/app/(app)/projects/[id]/studio-actions.ts) call `getUserApiKey` for the matching provider and pass it through. Model labels get a `-byok` suffix when the override is in use.
+- Mock-mode marker: the coach stream's chatty mock now appends ` [byok]` to the response when the user has an Anthropic key set. Lets the spec assert the BYOK resolver was actually consulted without a real API call.
+- Settings page at [`/me/keys`](src/app/(app)/me/keys/page.tsx) with [ProviderKeyCard.tsx](src/app/(app)/me/keys/ProviderKeyCard.tsx) — one card per provider showing current state ("Your key" / "Using platform key"), redacted display when set (e.g. `sk-ant-…ABCD`), paste-and-save form, optional friendly label, two-step delete confirmation. Plaintext is decrypted server-side and **redacted before reaching the browser** — the client never sees the full key, only the last 4 chars + recognised prefix.
+- NavBar entry "Keys" (md: only).
+- 5 new E2E tests in [tests/e2e/byok.spec.ts](tests/e2e/byok.spec.ts): save key + redacted display + reload persistence, mock-mode `[byok]` marker once a key is set, delete reverts to platform-key state, RLS cross-user (user B can't see user A's keys), unauthenticated /me/keys → /login redirect.
+- Total project E2E count: **127** (62 CI parallel + 15 mobile + 15 a11y + 4 portfolio + 6 earnings + 3 pricing + 7 learn + 8 onboarding-community + 5 byok + 2 cap stress local-only).
+
+**Decisions:**
+- **Encryption key derived from `SUPABASE_SERVICE_ROLE_KEY`** rather than a separate `ENCRYPTION_KEY`. Pros: zero new env vars to set, autonomous deployable. Cons: rotating the service-role key invalidates ciphertexts. We trade rotation flexibility for setup simplicity, and document the recovery path ("re-paste your key in /me/keys").
+- **Redact server-side, send the redacted form down.** Plaintext only exists in memory during request handling. The client never holds it. The `redactKey` util keeps the last 4 chars + a recognised prefix (sk-ant, sk-, r8_, etc.) so users can recognise their key without leaking it.
+- **Per-provider opt-in.** Users with a Replicate key can use it for image gen even without an Anthropic key. The resolver checks per-provider.
+- **Model label has a `-byok` suffix when a user key was used.** Helps observability later (e.g. "what % of generations are BYOK?") without adding a new column.
+- **No "test this key" button in v1.** Calling an Anthropic / Replicate / ElevenLabs validate endpoint costs money or doesn't exist. Save first, see errors on the next real request, surface them clearly. Halli can add a tiny tester later if it's worth it.
+
+**Hiccups + fixes:**
+- First test run had 4/5 green, 1 fail on the delete test — `data-byok-has-key` stayed `true` after clicking confirm-delete. Root cause: nested `<form>` (delete form inside save form). Browsers strip the inner one, so the confirm button submitted the SAVE action with empty `api_key` → "paste a key" error → no delete happened. Fixed by hoisting the delete confirm form out as a sibling of the save form.
+- One Windows + OneDrive `EPERM` on `.next` during build caused a flaky webServer start. Workaround: `taskkill` lingering node + `rm -rf .next` between runs. Pre-existing pain on this OS combo; not BYOK-specific.
+
+**Robustness checklist (Phase 7 / BYOK gate):**
+- ✅ Plaintext keys are encrypted at rest (AES-256-GCM with random IV per row + auth tag).
+- ✅ Plaintext is never sent to the browser (only the redacted form + a hidden DB ciphertext).
+- ✅ RLS isolates keys per user (verified by spec).
+- ✅ Resolver tested via mock-mode marker (proves the wiring works without a real API call).
+- ✅ Type-check + production build clean.
+- ⏳ Real-mode verification — Halli pastes a real Anthropic key and sees a real Sonnet response (manual after deploy).
+
+**Next on the master plan (deferred items):**
+- Stripe payments + credit packs + Pro subscription (originally Week 8) — needs Halli's Stripe account; not autonomous.
+- Work layer (AI Audit, profession packs).
+- Studio tools 4+.
+- Skill tree branches 3–5 (Tool Fluency / Application / Career & Money).
+- Marketplace / opportunity radar / client CRM / multilingual / mobile-money rails.
 
 ### 2026-05-01 (autonomous polish) — Lesson catalog at full size + mobile/a11y sweep on new routes
 
@@ -1017,8 +1063,19 @@ Guiding principles for every phase:
 
 **Robustness bar (cleared):** welcome flow optional/skippable on every screen · public posting requires explicit per-post opt-in (no auto-publish) · feeds spam-resistant (5/day cap on failures, like idempotency on wins) · RLS-safe (verified by spec).
 
+### Phase 7 — BYOK (Bring Your Own Keys) · ✅ shipped 2026-05-01
+**Goal:** Power users can plug in their own API keys for Anthropic / Replicate / ElevenLabs / OpenAI and pay providers directly. The platform-key fallback stays for everyone who doesn't.
+**Deliverables (all shipped):**
+- ✅ `user_api_keys` table with AES-256-GCM encryption at rest (key derived from `SUPABASE_SERVICE_ROLE_KEY`).
+- ✅ `/me/keys` settings page — paste / save / replace / delete per provider, with redacted display.
+- ✅ Resolver `getUserApiKey` consulted by every provider call site: coach stream, tutor, suggestions, image gen, text drafter, voice-over.
+- ✅ Mock-mode `[byok]` marker so the resolver wiring is testable without real API calls.
+- ✅ 5 E2E tests including RLS cross-user.
+
+**Robustness bar (cleared):** plaintext never reaches the browser (redacted server-side) · keys encrypted at rest · per-user RLS verified by spec · platform fallback intact.
+
 ### Stopping point
-End of Phase 6 = **all five product layers represented + onboarding + a hardened foundation**. After this, the original 12-week roadmap's BYOK/payments + Work layer are the next priorities. Total Phase 1–6 estimate: ~17 focused sessions.
+End of Phase 7 = **5 product layers + onboarding + community + BYOK power-user mode**. Original 12-week MVP is now feature-complete except for Stripe payments (needs Halli's Stripe setup) and the deferred v2 items (Work layer, Studio tools 4+, skill-tree branches 3–5, marketplace, etc.).
 
 ### How to use this plan
 - Each phase is its own `/plan` session — drill into concrete file changes, ship, mark robustness checklist done, then move on.

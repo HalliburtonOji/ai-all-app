@@ -51,6 +51,7 @@ export async function generateImageForProject(
   projectId: string,
   prompt: string,
   memoryHint?: string | null,
+  apiKeyOverride?: string | null,
 ): Promise<GenerateImageResult> {
   const trimmed = prompt.trim();
   if (trimmed.length === 0) {
@@ -82,10 +83,11 @@ export async function generateImageForProject(
     pngBytes = MOCK_PNG;
     modelLabel = hint ? "mock-with-context" : "mock";
   } else {
-    const apiToken = process.env.REPLICATE_API_TOKEN;
+    const apiToken = apiKeyOverride ?? process.env.REPLICATE_API_TOKEN;
     if (!apiToken) {
       return { error: "REPLICATE_API_TOKEN not configured on server" };
     }
+    if (apiKeyOverride) modelLabel = "flux-schnell-byok";
 
     try {
       const replicate = new Replicate({ auth: apiToken });

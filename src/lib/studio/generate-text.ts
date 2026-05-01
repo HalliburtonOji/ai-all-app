@@ -46,6 +46,7 @@ export async function generateTextDraftForProject(
   prompt: string,
   kindHint: TextDraftKind = "general",
   memoryHint?: string | null,
+  apiKeyOverride?: string | null,
 ): Promise<GenerateTextResult> {
   const trimmed = prompt.trim();
   if (trimmed.length === 0) {
@@ -75,7 +76,7 @@ export async function generateTextDraftForProject(
     }`;
     modelLabel = hint ? "mock-text-with-context" : "mock-text";
   } else {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    const apiKey = apiKeyOverride ?? process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       return { error: "ANTHROPIC_API_KEY not configured on server" };
     }
@@ -96,7 +97,7 @@ export async function generateTextDraftForProject(
       const text =
         resp.content[0]?.type === "text" ? resp.content[0].text : "";
       content = text.trim().slice(0, MAX_OUTPUT_LENGTH);
-      modelLabel = MODEL;
+      modelLabel = apiKeyOverride ? `${MODEL}-byok` : MODEL;
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Anthropic call failed";
       return { error: msg };

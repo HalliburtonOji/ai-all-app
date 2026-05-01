@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/utils/supabase/server";
+import { getUserApiKey } from "@/lib/byok/get-key";
 import { getLessonBySlug } from "@/lib/learn/lessons";
 
 const MODEL = "claude-sonnet-4-6";
@@ -74,7 +75,9 @@ export async function POST(request: Request) {
     });
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  // Prefer user's BYOK Anthropic key; fall back to platform.
+  const userKey = await getUserApiKey(supabase, "anthropic");
+  const apiKey = userKey ?? process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return Response.json(
       { error: "Tutor not configured on this server." },

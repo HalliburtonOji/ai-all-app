@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/utils/supabase/server";
+import { getUserApiKey } from "@/lib/byok/get-key";
 import {
   SUGGESTION_SYSTEM_PROMPT,
   buildSuggestionContext,
@@ -102,9 +103,11 @@ export async function POST(request: Request) {
     .slice()
     .reverse(); // chronological for the prompt
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  // BYOK preference: use the user's stored Anthropic key if present.
+  const userKey = await getUserApiKey(supabase, "anthropic");
+  const apiKey = userKey ?? process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    console.error("[coach/suggest] ANTHROPIC_API_KEY missing");
+    console.error("[coach/suggest] no anthropic key available");
     return NextResponse.json({ suggestions: [] });
   }
 
