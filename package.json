@@ -14,6 +14,7 @@
     "smoke:prod": "tsx scripts/smoke-test.ts https://ai-all-app.vercel.app"
   },
   "dependencies": {
+    "@sentry/nextjs": "^10.51.0",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.105.0",
     "next": "16.2.4",
