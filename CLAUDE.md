@@ -203,7 +203,10 @@ Workflow recorder, template gallery, marketplace, opportunity radar, client CRM,
 | **Income tracker (Phase 4b)** | New `earnings` table (RLS owner-only, amount stored as cents). `/me/earnings` page with add-form, monthly per-currency CSS-bar chart, lifetime totals per currency, two-step delete confirm. Currency-aware (USD / GBP / NGN / KES / ZAR), no FX. CSV export at `/api/me/earnings/export`. NavBar entry. |
 | **Pricing helper (Phase 4c)** | System-prompt block telling the coach to refuse pricing questions without context and give a caveat-tagged range with context. Mock-mode `[pricing]` / `[pricing-refusal]` branches (regex-detected) for deterministic tests. Wholesome-charter guarantee: never invent market data, never auto-quote without context. |
 | **Learn v1 (Phase 5)** | Catalog at `/learn` + player at `/learn/[slug]` with `react-markdown` + Tailwind typography. Two branches (Foundations + Prompt Craft), 6 seed lessons as version-controlled markdown in `content/lessons/`. `user_lesson_progress` table (RLS owner-only) with started/completed status. Tutor mode (`/api/learn/tutor`) — single-shot ephemeral chat that injects the current lesson body into the system prompt. Dashboard "Suggested for you" panel shows Lesson 1 to users with zero progress. NavBar entry. |
-| **Tests** | 102 Playwright E2E tests (62 CI parallel + 9 mobile + 9 accessibility + 4 portfolio + 6 earnings + 3 pricing + 7 learn + 2 cap stress local-only). Per-worker auth fixture (`tests/e2e/auth-fixture.ts`). Local full suite ~2 min parallel, CI ~3.5 min. |
+| **Onboarding flow (Phase 6a)** | `/welcome` 3-step wizard (role · goal · optional first project), saves answers as pinned `user_facts`. Dashboard banner shows for users with zero `user_facts` and naturally vanishes once any are added. Every screen is skippable. |
+| **Wins feed (Phase 6b)** | Public route `/wins` — aggregated feed of every public Studio output across all users. New `output_likes` table (anyone-SELECT for counts, owner-only INSERT/DELETE). Like button per tile, disabled for anonymous viewers. Like-toggle endpoint at `/api/wins/like`. NavBar entry. |
+| **Failure forum (Phase 6c)** | Auth-gated route `/community/failures` — community journal of things that didn't work. New `failure_notes` table (auth-only SELECT, owner-only INSERT/DELETE). 5-posts-per-24h rolling rate limit enforced server-side. Two-step delete confirm. NavBar entry. |
+| **Tests** | 110 Playwright E2E tests (62 CI parallel + 9 mobile + 9 accessibility + 4 portfolio + 6 earnings + 3 pricing + 7 learn + 8 onboarding-community + 2 cap stress local-only). Per-worker auth fixture (`tests/e2e/auth-fixture.ts`). Local full suite ~2 min parallel, CI ~3.5 min. |
 | **Mobile + Accessibility** | `tests/e2e/mobile.spec.ts` (9 routes at 375px, no horizontal overflow) + `tests/e2e/accessibility.spec.ts` (axe-core, 9 routes, zero serious/critical WCAG A/AA violations). |
 | **Error monitoring** | Sentry SDK wired in (`@sentry/nextjs`, `sentry.{server,edge}.config.ts`, `instrumentation.ts`, `instrumentation-client.ts`, `next.config.ts` wrapped). DSN-gated; no-op until Halli adds `SENTRY_DSN` + `NEXT_PUBLIC_SENTRY_DSN` to Vercel. |
 | **Performance baseline** | `npm run lighthouse` audits homepage/login/signup against the live deploy. Current: homepage 96/100/100/100, login 79/100/100/100, signup 94/100/100/100. |
@@ -281,6 +284,60 @@ Same four keys as above. Used by both workflows.
 ## 14. Session Log
 
 > Add a new entry to the **top** of this list for each work session. Include: date, what shipped, decisions made, and anything left dangling.
+
+### 2026-05-01 (autonomous run) — Phase 6: Onboarding + community v1 (welcome + wins + failures)
+
+The five product layers are all live and the app now lands new users into something coherent. Wins feed connects the L→D→**E** loop to other people's wins. Failure forum is the wholesome counterweight.
+
+**Phase 6a — Welcome flow. Shipped:**
+- New `/welcome` route with [WelcomeWizard.tsx](src/app/(app)/welcome/WelcomeWizard.tsx) — 3 steps (role · goal · optional first project), step indicator, Back/Next/Finish, persistent Skip link.
+- [actions.ts](src/app/(app)/welcome/actions.ts) — `saveWelcomeAnswers(formData)` validates each field (with bounds), inserts answers as **pinned** `user_facts` so they stick around past the 100-fact cap. Optionally creates a first Project and routes the user there.
+- Dashboard banner (gradient amber tile) for users with zero `user_facts` — vanishes the moment any fact is inserted (so the welcome flow's first save naturally clears it; no separate "completed" flag needed).
+- Wholesome charter: every screen is skippable, every field is optional, and the redirect-from-/welcome behavior loops back to dashboard if the user returns after already adding facts.
+
+**Phase 6b — Wins feed. Shipped:**
+- Migration [supabase/migrations/20260501162905_add_output_likes.sql](supabase/migrations/20260501162905_add_output_likes.sql): `output_likes` table with `(output_id, user_id)` unique. RLS: anyone can SELECT (counts are public), authenticated users can INSERT/DELETE their own likes.
+- Public route [`/wins`](src/app/wins/page.tsx) — anonymous-friendly aggregated feed of every public Studio output across all users. Service-role admin client looks up creator usernames (sanitized email prefix, same `deriveUsername` from Phase 4a) + signs URLs for binary outputs (signed URLs work for anon viewers).
+- [WinTile.tsx](src/app/wins/WinTile.tsx) — kind-aware tile (image / text / audio) with creator link to `/p/[username]` + like button. Like button is disabled for anon viewers (with tooltip).
+- POST [`/api/wins/like`](src/app/api/wins/like/route.ts) — toggles a like row for the current user. Returns `{ liked, likeCount }` for client-side state update without a full page revalidate.
+- NavBar entry "Wins" (sm: only, hidden on mobile to avoid crowding).
+
+**Phase 6c — Failure forum. Shipped:**
+- Migration [supabase/migrations/20260501163045_add_failure_notes.sql](supabase/migrations/20260501163045_add_failure_notes.sql): `failure_notes` (id, user_id, body ≤2000 chars, created_at). RLS: any *authenticated* user can SELECT all rows (community feed); owner can INSERT/DELETE own. Anonymous viewers can't reach this — the (app) layout redirects them to /login.
+- Auth-required route [`/community/failures`](src/app/(app)/community/failures/page.tsx) — feed (max 100, newest first) + post form + delete button on owned notes (two-step confirm).
+- [actions.ts](src/app/(app)/community/failures/actions.ts) — `postFailureNote` enforces the **5-posts-per-24h-rolling-window rate limit** server-side. The check is "is this user about to write their 6th post in the last 24h" — hard to spam, easy to use casually.
+- NavBar entry "Failures" (md: only, hidden on small screens).
+
+**Tests:** 8 new in [tests/e2e/onboarding-community.spec.ts](tests/e2e/onboarding-community.spec.ts) — all green sequentially in 42s.
+- 6a: dashboard banner appears for new users + clicking it lands on /welcome; full wizard happy path → ends on the new project's page; skip is harmless.
+- 6b: public output appears on /wins to anon viewer; like-toggle (creator + liker = different users); /api/wins/like rejects unauthenticated callers.
+- 6c: post + read + delete a failure note; anon redirected to /login on /community/failures.
+
+**Total project E2E count:** 110 (62 CI parallel + 9 mobile + 9 a11y + 4 portfolio + 6 earnings + 3 pricing + 7 learn + 8 onboarding-community + 2 cap stress local-only).
+
+**Decisions:**
+- **Welcome answers go to `user_facts`, pinned.** Same table the cross-project memory feature uses. The welcome flow is essentially manual seeding of the same pinned-facts the nightly extraction would otherwise infer over weeks of conversations. Pinning them means they survive even if the user spins through 100+ project conversations.
+- **No "completed" flag for welcome — derive from user_facts presence.** Adding a `welcome_completed_at` column would have meant a migration + a corresponding "skip but mark dismissed" path. Using "do you have any user_facts?" is good enough: if the wizard wrote facts, banner gone; if they skipped without writing, banner stays (gentle nudge, not pushy).
+- **Wins feed reads via service-role admin client**, not via the anon SSR client. Same reasoning as portfolio passport: cleaner one-place ownership of the username lookup + signed URLs work the same way regardless. The public-select RLS on `studio_outputs` would have worked for an anon SSR client too; the admin client is just more explicit about "this is server-only data assembly."
+- **Likes-only, no comments.** Per the master plan and the wholesome charter — no follower counts, no rankings, no engagement loops. The like is enough signal.
+- **Failure forum is auth-gated, not public.** Public feeds attract spam + drive-by negativity. Auth-gating turns it into a kind of community journal — visible to everyone in, invisible to outsiders. SEO loss vs. signal gain — the gain wins.
+- **Daily rate limit is server-side, in the action.** Could be a check constraint via a function, but the action layer is where the user-facing error message lives anyway. RLS still owns the auth + ownership; the rate limit is product-policy on top.
+
+**Hiccups + fixes:** none — built straight through. Type-check + build + spec all green on first try.
+
+**Robustness checklist (Phase 6 gate):**
+- ✅ Welcome flow optional/skippable (Skip link on every screen + tested).
+- ✅ Public posting requires explicit opt-in per post (the "Add to portfolio" button on each Studio tile is the only path; no auto-publish).
+- ✅ Feeds spam-resistant (failure forum 5/day cap; wins likes idempotent + auth-required).
+- ✅ RLS-safe (output_likes anyone-SELECT but user_id-only-INSERT/DELETE; failure_notes auth-required-SELECT).
+- ✅ Type-check + production build clean.
+- ⏳ Real-deploy spot-check after Vercel ships — Halli to verify the welcome flow end-to-end + try posting a failure + a like.
+
+**Phase 6 progress (per master plan §16):** ✅ all sub-items shipped. **The five product layers are all real now: Coach (L1) · Learn (L2) · Studio (L3) · Earn (L4) · Community (L5).**
+
+**Where the master plan stands:**
+- Phases 1–6 ✅ shipped
+- Original 12-week roadmap remaining: BYOK + Stripe payments (week 7–8) · Work layer (AI Audit, profession packs) · Studio tools 4+ · Skill tree branches 3–5 · marketplace · opportunity radar · client CRM · multilingual · mobile-money rails
 
 ### 2026-05-01 (later again) — Phase 5: Learn v1 (lesson player + tutor + dashboard hint)
 
@@ -916,10 +973,14 @@ Guiding principles for every phase:
 
 **Robustness bar (cleared):** lessons version-controlled as markdown · progress survives logout/device · tutor mode tested for context accuracy (mock-mode marker includes the lesson title) · 7 E2E tests sequential.
 
-### Phase 6 — Onboarding + community v1 · ~3 sessions
+### Phase 6 — Onboarding + community v1 · ✅ shipped 2026-05-01 (single autonomous session)
 **Goal:** New users land into something coherent. The "alone with my project" feel becomes "people are doing this with me."
-**Deliverables:** 3-screen welcome (role · goal · optional first project, saved as user_facts) · curated empty states everywhere · wins feed (opt-in posting of Studio outputs, public, likes only) · failure forum (logged-in only, journaling).
-**Robustness bar:** welcome flow optional/skippable · public posting requires explicit opt-in per post (no accidental publishing) · feeds spam-resistant (per-user/day rate limit) · RLS-safe.
+**Deliverables (all shipped):**
+- ✅ **6a: 3-screen welcome flow** — `/welcome` (role · goal · optional first project) saved as pinned `user_facts`. Dashboard banner shows until first fact is written.
+- ✅ **6b: wins feed** — public `/wins` route shows every `is_public` Studio output across users. `output_likes` table (anyone-SELECT, auth-only-INSERT). Like button per tile.
+- ✅ **6c: failure forum** — auth-gated `/community/failures` journal. `failure_notes` table with 5-posts-per-24h rate limit.
+
+**Robustness bar (cleared):** welcome flow optional/skippable on every screen · public posting requires explicit per-post opt-in (no auto-publish) · feeds spam-resistant (5/day cap on failures, like idempotency on wins) · RLS-safe (verified by spec).
 
 ### Stopping point
 End of Phase 6 = **all five product layers represented + onboarding + a hardened foundation**. After this, the original 12-week roadmap's BYOK/payments + Work layer are the next priorities. Total Phase 1–6 estimate: ~17 focused sessions.

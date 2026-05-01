@@ -38,6 +38,11 @@ export default async function DashboardPage() {
   const hasAnyLessonProgress =
     !!lessonProgressRows && lessonProgressRows.length > 0;
   const firstLesson = getFirstLesson();
+  // Show the welcome banner for users who haven't shared anything
+  // about themselves yet (no user_facts). Welcome flow inserts at
+  // least one fact, so the banner naturally disappears once
+  // they finish — without a separate "completed" flag.
+  const hasUserFacts = userFactRows && userFactRows.length > 0;
 
   const recentProjects: Project[] = projects ?? [];
   const userFacts: UserFact[] = (userFactRows ?? []) as UserFact[];
@@ -66,6 +71,31 @@ export default async function DashboardPage() {
           + New Project
         </Link>
       </div>
+
+      {!hasUserFacts && (
+        <section
+          data-dashboard-welcome-banner="true"
+          className="mt-8 rounded-lg border border-zinc-200 bg-gradient-to-br from-amber-50 to-white p-5 dark:border-zinc-800 dark:from-amber-950/30 dark:to-zinc-950"
+        >
+          <p className="text-xs font-medium uppercase tracking-wide text-amber-700 dark:text-amber-400">
+            Get the most out of the coach
+          </p>
+          <h2 className="mt-1 text-lg font-semibold text-black dark:text-white">
+            Spend 90 seconds telling us about you
+          </h2>
+          <p className="mt-1 text-sm text-zinc-700 dark:text-zinc-300">
+            The coach gives sharper, less-generic answers when it knows what
+            you&apos;re trying to do. You can skip anything.
+          </p>
+          <Link
+            href="/welcome"
+            data-dashboard-welcome-link="true"
+            className="mt-3 inline-block rounded-md bg-black px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+          >
+            Start the 3 questions
+          </Link>
+        </section>
+      )}
 
       <UserMemoryPanel
         facts={userFacts}

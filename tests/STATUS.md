@@ -1,6 +1,6 @@
 # Test Health Status
 
-**Last updated:** 2026-05-01 (Phase 5 shipped — Learn v1: catalog, player, tutor mode, dashboard hint)
+**Last updated:** 2026-05-01 (Phase 6 shipped — Onboarding + community v1. All 5 product layers live.)
 
 ## Coverage by Feature
 
@@ -25,6 +25,9 @@
 | Phase 4b — income tracker: add entry + persists, multi-currency totals, delete with confirm, RLS cross-user, CSV export with header, amount=0 server-side rejection | 6 | 2026-05-01 | `earnings` table with bigint cents + currency check (USD/GBP/NGN/KES/ZAR). No FX conversion — totals shown per currency. `/me/earnings` page with form + history + per-currency monthly CSS-bar chart. CSV export at `/api/me/earnings/export`. Per-test fresh signup pattern (entries are user-scoped → tests need isolated users). |
 | Phase 4c — pricing helper: refuses without context (`[pricing-refusal]` branch), gives range + caveat with context (`[pricing]` branch), non-pricing words skip the branch | 3 | 2026-05-01 | Coach system prompt now includes a pricing-questions block (refuse without context, give caveat-tagged range with context, never invent market data). Mock mode regex-detects pricing keywords (charge/rate/price/worth/etc.) and emits one of two deterministic markers so tests can assert the right branch fired. Real Anthropic in production follows the system prompt. |
 | Phase 5 — Learn v1: catalog renders both branches + lesson cards, opening a lesson auto-marks 'started', mark complete + toggle back persists across reload, tutor mode answers with lesson context (mock marker includes lesson title), non-existent slug 404, dashboard suggests Lesson 1 to fresh users + disappears once started, tutor endpoint rejects unauthenticated callers | 7 | 2026-05-01 | Lessons live as version-controlled markdown in `content/lessons/`. Auto-mark-started is inline in the page render (NOT a server action — that hits Next.js's "no revalidatePath during render" rule). Tutor mode is ephemeral (no DB persistence — the lesson is the durable artifact). Mock-mode tutor returns a deterministic marker that proves lesson context was injected. |
+| Phase 6a — welcome flow: dashboard banner appears + clicks to /welcome, full wizard happy path lands user on first project, skip is harmless | 3 | 2026-05-01 | Banner only renders for users with zero `user_facts`. Wizard saves answers as **pinned** facts so they survive the 100-fact cap. Skip button on every screen — robustness bar requires the whole flow be optional. |
+| Phase 6b — wins feed: public output appears on `/wins` to anonymous viewers, like-toggle (count + state) works for authenticated users, /api/wins/like rejects unauthenticated callers | 3 | 2026-05-01 | Public route — service-role admin client assembles the feed (usernames + signed URLs). New `output_likes` table with anyone-SELECT + owner-only-INSERT/DELETE policies. Like button is disabled for anonymous viewers (with tooltip explaining why). |
+| Phase 6c — failure forum: post + read + delete a failure note, anonymous viewer redirected to /login on `/community/failures` | 2 | 2026-05-01 | Auth-gated. New `failure_notes` table with auth-required-SELECT + owner-only-INSERT/DELETE policies. **5-posts-per-24h-rolling-window rate limit** enforced server-side in the action. The 24h cap is a self-pacing nudge, not a hard quota — failure deserves time to settle. |
 
 ## Untested by Design
 
@@ -62,6 +65,7 @@
 
 | Date | Branch | Outcome | Runtime | Where |
 |------|--------|---------|---------|-------|
+| 2026-05-01 | main | ✅ Phase 6 shipped — 8/8 onboarding-community sequential | 42s | local — targeted spec only (autonomous run; Halli was away). Welcome + wins + failure forum all green on first try. |
 | 2026-05-01 | main | ✅ Phase 5 shipped — 7/7 learn sequential (1 flaky, passed on retry) | 53s | local — targeted spec only. Found + fixed Next.js 16 "no revalidatePath during render" bug while writing the spec. |
 | 2026-05-01 | main | ✅ Phase 4b + 4c shipped — 9/9 earnings + pricing sequential | 39s | local — targeted specs only (earnings + pricing combined). Phase 4 / Earn v1 fully complete. |
 | 2026-05-01 | main | ✅ Phase 4a (portfolio passport) shipped — 4/4 portfolio.spec sequential | 30s | local — targeted spec only, per the test-cadence policy ("normal code review + targeted tests per build, full suite every ~5 ships"). Found + fixed missing UPDATE RLS policy on `studio_outputs` while writing the spec. |
