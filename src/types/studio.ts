@@ -46,6 +46,12 @@ export interface StudioOutput {
    * duration_ms, kind_hint }. Optional — many outputs don't need it.
    */
   metadata?: Record<string, unknown> | null;
+  /**
+   * Per-output opt-in for the portfolio passport. When true, the
+   * output is visible on the public route /p/[username]. Default
+   * false; never auto-toggled.
+   */
+  is_public?: boolean;
   created_at: string;
 }
 

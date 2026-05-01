@@ -199,7 +199,8 @@ Workflow recorder, template gallery, marketplace, opportunity radar, client CRM,
 | **Project memory + User memory** | Two-tier memory: per-project facts + cross-project user facts. Nightly cron extraction. Memory tab on project pages, "About you" panel on dashboard. Pinning, editing, deleting, RLS. |
 | **Coach × Studio (Phase 1)** | Coach gains tool-using ability. SSE events `tool_started` / `tool_result` / `tool_failed`. Inline image bubbles in chat. Memory-aware Studio prompts. "Refine with coach" button. Recent-activity strip on project header. |
 | **Studio v2 (Phase 2)** | One `studio_outputs` superset table hosts image / text / audio. Three tools: image (Replicate FLUX schnell), copy/email drafter (Anthropic Sonnet 4.6), voice-over (ElevenLabs Flash v2.5, 500-char ≤30s clips). Tool-grid landing, per-tool panels, kind-aware coach bubbles. |
-| **Tests** | 82 Playwright E2E tests (62 CI parallel + 9 mobile + 9 accessibility + 2 cap stress local-only). Per-worker auth fixture (`tests/e2e/auth-fixture.ts`). Local full suite ~2 min parallel, CI ~3.5 min. |
+| **Portfolio passport (Phase 4a)** | Per-output `is_public` opt-in (default false) on `studio_outputs`. New owner-only UPDATE RLS policy + anyone-can-SELECT-where-public policy. Public route `/p/[username]` (service-role lookup by sanitized email prefix) renders public outputs only with kind-aware tiles. "Add to portfolio" / "Public" toggle in the Studio gallery. |
+| **Tests** | 86 Playwright E2E tests (62 CI parallel + 9 mobile + 9 accessibility + 4 portfolio + 2 cap stress local-only). Per-worker auth fixture (`tests/e2e/auth-fixture.ts`). Local full suite ~2 min parallel, CI ~3.5 min. |
 | **Mobile + Accessibility** | `tests/e2e/mobile.spec.ts` (9 routes at 375px, no horizontal overflow) + `tests/e2e/accessibility.spec.ts` (axe-core, 9 routes, zero serious/critical WCAG A/AA violations). |
 | **Error monitoring** | Sentry SDK wired in (`@sentry/nextjs`, `sentry.{server,edge}.config.ts`, `instrumentation.ts`, `instrumentation-client.ts`, `next.config.ts` wrapped). DSN-gated; no-op until Halli adds `SENTRY_DSN` + `NEXT_PUBLIC_SENTRY_DSN` to Vercel. |
 | **Performance baseline** | `npm run lighthouse` audits homepage/login/signup against the live deploy. Current: homepage 96/100/100/100, login 79/100/100/100, signup 94/100/100/100. |
@@ -277,6 +278,48 @@ Same four keys as above. Used by both workflows.
 ## 14. Session Log
 
 > Add a new entry to the **top** of this list for each work session. Include: date, what shipped, decisions made, and anything left dangling.
+
+### 2026-05-01 (even later) — Phase 4a: portfolio passport
+
+First slice of Phase 4 (Earn v1). The product loop now goes one step further: a creator can flag any Studio output public, and an anonymous viewer can browse a creator's public work at `/p/[username]`. No income tracker, no pricing helper yet — just the visibility primitive.
+
+**Shipped:**
+- Migration [supabase/migrations/20260501095650_add_portfolio_passport.sql](supabase/migrations/20260501095650_add_portfolio_passport.sql): `is_public bool not null default false` on `studio_outputs`, partial index `(user_id, is_public, created_at desc) where is_public = true`, RLS policy "Anyone can view public studio outputs" (anon role included) gated on `is_public = true`. The existing user-owned SELECT policy is unchanged so logged-in users still see all their own outputs (private + public).
+- Migration [supabase/migrations/20260501100625_add_studio_outputs_update_policy.sql](supabase/migrations/20260501100625_add_studio_outputs_update_policy.sql): missing UPDATE policy on `studio_outputs` (owner-only). Phase 2's recreate-policies block dropped only SELECT/INSERT/DELETE — UPDATE was never added. The portfolio toggle was the first feature to actually try writing, so it surfaced the bug immediately. Caught by the targeted spec.
+- New action `togglePublicOutput(formData)` in [src/app/(app)/projects/[id]/studio-actions.ts](src/app/(app)/projects/[id]/studio-actions.ts) — flips `is_public`, RLS-checked.
+- [StudioOutputGallery.tsx](src/app/(app)/projects/[id]/StudioOutputGallery.tsx) `TileFooter` now renders a portfolio-toggle button alongside delete. Hidden on hover (sm:opacity-0 group-hover:opacity-100) when private; always visible (emerald accent) when public so the user always knows which of their outputs are exposed.
+- New public route [src/app/p/[username]/page.tsx](src/app/p/[username]/page.tsx) — no-auth, service-role lookup of user by sanitized email prefix, lists their `is_public=true` outputs newest-first (cap 60) with kind-aware tiles (image / text / audio). Empty state when nothing's been opted in. Footer "Built on AI All App" link back to `/`.
+- New util [src/lib/portfolio/username.ts](src/lib/portfolio/username.ts): `deriveUsername(email)` → lowercase `[a-z0-9_]` of the part before `@`. Same function used both for resolving the URL slug and for matching auth.users emails.
+- 4 new targeted E2E tests in [tests/e2e/portfolio.spec.ts](tests/e2e/portfolio.spec.ts): toggle-public-then-anon-sees-it, private-output-not-on-public-route, toggle-round-trip-back-to-private, non-existent-username-404. All four pass sequentially in 30s.
+- Total project E2E count: **86** (62 CI parallel + 9 mobile + 9 a11y + 4 portfolio + 2 cap stress local-only).
+
+**Decisions:**
+- **No `username` column on auth.users.** The migration comment captures the rationale: derive at render time, lean on the email-prefix sanitisation. Linear-scan via `auth.admin.listUsers` is fine while the user count is small. Add a proper column when it stops being.
+- **Email-prefix collisions are unhandled in v1.** First match wins. If two users sanitize to the same slug (e.g. `john.doe@x.com` and `johndoe@x.com` both → `johndoe`), only one gets the canonical URL. Acceptable for now — we'll add the `-<short_id>` collision suffix when the schema gets a username column.
+- **Service-role on the public page** is necessary for two things: (1) `auth.admin.listUsers` to find the user by email, (2) reading `studio_outputs` without an auth session — even though the public-select RLS policy would in principle work for anon clients, using the admin client + filtering on `is_public=true` keeps the query tight and lets the same client also generate signed URLs for binary outputs. Storage signed URLs work for anon viewers because they validate the URL signature, not the auth context.
+- **Per-output opt-in, default false, never auto-toggled.** Wholesome charter: the user always actively chooses what's public.
+- **No bulk toggle UI.** Click-by-click is fine for v1; it's also a friction-on-purpose feature — you should think before publishing each piece.
+
+**Hiccups + fixes:**
+- The toggle silently did nothing on the first test run. The tile's `data-studio-output-public` stayed `false` after click → RLS was denying the UPDATE silently because no UPDATE policy existed on `studio_outputs`. Diagnosed by re-reading the Phase 2 schema migration and noticing the recreate-policies block was missing UPDATE. Added the missing policy in a follow-up migration. Targeted spec now 4/4 green.
+- Anonymous-viewer test logs surface `Refresh Token Not Found` errors from the middleware — expected noise (the anon context has no cookies; middleware tries `getUser` and the SDK logs that). Doesn't affect the test outcome.
+
+**Robustness checklist (Phase 4a gate):**
+- ✅ E2E coverage: opt-in flow + public visibility + privacy boundary + 404 edge case all tested.
+- ✅ Public route never leaks private data — a regression test (private-not-on-public) is part of the spec.
+- ✅ RLS verified: the missing-UPDATE-policy bug was caught by the spec, not by manual testing.
+- ✅ Type-check + production build clean.
+- ⏳ Mobile pass / a11y check on the new `/p/[username]` route — not in the new spec; deferred to a future sweep (low risk, page is layout-trivial).
+- ⏳ Real-deploy spot-check — Halli to verify after Vercel ships.
+
+**Phase 4 progress (per master plan §16):**
+- ✅ **4a: portfolio passport** — shipped this session.
+- ⏳ **4b: income tracker** — `/me/earnings`, manual log + CSV export + cumulative chart, currency-aware. Next session.
+- ⏳ **4c: pricing helper** — coach intent that uses memory + market-data prompt, refuses without context. After 4b.
+
+**Next session candidates:**
+- **Phase 4b — income tracker**, in the queue order from the master plan.
+- Auto-toggle the new public output to recent-activity strip with a "Public" badge so the user can see at a glance what's exposed (small UX add, not strictly Phase 4 scope).
 
 ### 2026-05-01 (later) — Phase 3 fully shipped: a11y pass + Sentry + Lighthouse
 
@@ -759,9 +802,13 @@ Guiding principles for every phase:
 **Deliverables:** per-worker `storageState` Playwright refactor (~5 signups/run instead of 60) · Sentry (or equivalent) wired client + server · accessibility pass (keyboard nav, aria, focus) · performance pass (Lighthouse ≥90) · mobile pass.
 **Robustness bar:** full E2E suite <2 min, zero flakes across 5 consecutive runs · Lighthouse ≥90 on top-4 routes · WCAG AA basics verified · CI green.
 
-### Phase 4 — Earn v1 · ~3 sessions
+### Phase 4 — Earn v1 · ~3 sessions (4a shipped 2026-05-01)
 **Goal:** L→D→**E** loop becomes visible. The first feature where the app demonstrably helps users *make money*.
-**Deliverables:** portfolio passport (per-output opt-in toggle → public `/p/:username` route) · income tracker `/me/earnings` (manual log + CSV export + cumulative chart, currency-aware: NGN/KES/ZAR/GBP/USD) · pricing helper coach intent (uses memory + market-data prompt, refuses without context).
+**Deliverables:**
+- ✅ **4a: portfolio passport** — per-output opt-in toggle → public `/p/[username]` route. Shipped 2026-05-01 with 4 E2E tests + missing UPDATE-policy fix on `studio_outputs`.
+- ⏳ **4b: income tracker** — `/me/earnings`, manual log + CSV export + cumulative chart, currency-aware (NGN/KES/ZAR/GBP/USD).
+- ⏳ **4c: pricing helper** — coach intent (uses memory + market-data prompt, refuses without context).
+
 **Robustness bar:** public route never leaks private data (explicit RLS test) · currency arithmetic correct · pricing helper's caveats present (wholesome charter).
 
 ### Phase 5 — Learn v1 · ~4 sessions

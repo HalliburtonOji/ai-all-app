@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Image from "next/image";
 import type { StudioOutput, StudioOutputKind } from "@/types/studio";
-import { deleteOutput } from "./studio-actions";
+import { deleteOutput, togglePublicOutput } from "./studio-actions";
 
 interface StudioOutputGalleryProps {
   projectId: string;
@@ -73,11 +73,19 @@ function StudioOutputTile({
   projectId: string;
 }) {
   const [isPending, startTransition] = useTransition();
+  const [isToggling, startToggleTransition] = useTransition();
   const [expanded, setExpanded] = useState(false);
+  const isPublic = output.is_public === true;
 
   function handleDelete(formData: FormData) {
     startTransition(async () => {
       await deleteOutput(formData);
+    });
+  }
+
+  function handleTogglePublic(formData: FormData) {
+    startToggleTransition(async () => {
+      await togglePublicOutput(formData);
     });
   }
 
@@ -88,6 +96,7 @@ function StudioOutputTile({
     "data-studio-output-kind": output.kind,
     "data-studio-output-index": index,
     "data-studio-output-model": output.model,
+    "data-studio-output-public": isPublic ? "true" : "false",
   };
 
   if (output.kind === "image" && output.signed_url) {
@@ -109,6 +118,9 @@ function StudioOutputTile({
           projectId={projectId}
           isPending={isPending}
           onDelete={handleDelete}
+          isPublic={isPublic}
+          isToggling={isToggling}
+          onTogglePublic={handleTogglePublic}
         />
       </li>
     );
@@ -146,6 +158,9 @@ function StudioOutputTile({
           projectId={projectId}
           isPending={isPending}
           onDelete={handleDelete}
+          isPublic={isPublic}
+          isToggling={isToggling}
+          onTogglePublic={handleTogglePublic}
         />
       </li>
     );
@@ -170,6 +185,9 @@ function StudioOutputTile({
           projectId={projectId}
           isPending={isPending}
           onDelete={handleDelete}
+          isPublic={isPublic}
+          isToggling={isToggling}
+          onTogglePublic={handleTogglePublic}
         />
       </li>
     );
@@ -192,12 +210,18 @@ function TileFooter({
   projectId,
   isPending,
   onDelete,
+  isPublic,
+  isToggling,
+  onTogglePublic,
 }: {
   caption?: string;
   outputId: string;
   projectId: string;
   isPending: boolean;
   onDelete: (formData: FormData) => void;
+  isPublic: boolean;
+  isToggling: boolean;
+  onTogglePublic: (formData: FormData) => void;
 }) {
   return (
     <div className="flex items-start justify-between gap-2 p-3 pt-2">
@@ -211,18 +235,43 @@ function TileFooter({
       ) : (
         <span aria-hidden className="flex-1" />
       )}
-      <form action={onDelete}>
-        <input type="hidden" name="id" value={outputId} />
-        <input type="hidden" name="project_id" value={projectId} />
-        <button
-          type="submit"
-          disabled={isPending}
-          aria-label="Delete output"
-          className="rounded px-2 py-0.5 text-xs text-zinc-500 opacity-100 transition-opacity hover:bg-black/10 hover:text-red-600 disabled:opacity-50 sm:opacity-0 sm:group-hover:opacity-100 dark:hover:bg-white/10 dark:hover:text-red-400"
-        >
-          Delete
-        </button>
-      </form>
+      <div className="flex flex-shrink-0 items-center gap-1">
+        <form action={onTogglePublic}>
+          <input type="hidden" name="id" value={outputId} />
+          <input type="hidden" name="project_id" value={projectId} />
+          <input
+            type="hidden"
+            name="currently_public"
+            value={isPublic ? "true" : "false"}
+          />
+          <button
+            type="submit"
+            disabled={isToggling}
+            aria-label={isPublic ? "Make output private" : "Add output to portfolio"}
+            data-public-toggle="true"
+            data-currently-public={isPublic ? "true" : "false"}
+            className={
+              isPublic
+                ? "rounded px-2 py-0.5 text-xs font-medium text-emerald-700 transition-colors hover:bg-emerald-50 disabled:opacity-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
+                : "rounded px-2 py-0.5 text-xs text-zinc-600 transition-opacity hover:bg-black/10 hover:text-emerald-700 disabled:opacity-50 sm:opacity-0 sm:group-hover:opacity-100 dark:text-zinc-400 dark:hover:bg-white/10 dark:hover:text-emerald-400"
+            }
+          >
+            {isPublic ? "Public" : "Add to portfolio"}
+          </button>
+        </form>
+        <form action={onDelete}>
+          <input type="hidden" name="id" value={outputId} />
+          <input type="hidden" name="project_id" value={projectId} />
+          <button
+            type="submit"
+            disabled={isPending}
+            aria-label="Delete output"
+            className="rounded px-2 py-0.5 text-xs text-zinc-600 opacity-100 transition-opacity hover:bg-black/10 hover:text-red-600 disabled:opacity-50 sm:opacity-0 sm:group-hover:opacity-100 dark:text-zinc-400 dark:hover:bg-white/10 dark:hover:text-red-400"
+          >
+            Delete
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

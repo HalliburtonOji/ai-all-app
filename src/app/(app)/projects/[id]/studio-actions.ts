@@ -239,3 +239,30 @@ export async function deleteOutput(formData: FormData) {
  * Drop after Phase 2 ships and all consumers reference deleteOutput.
  */
 export const deleteImage = deleteOutput;
+
+/**
+ * Toggle the is_public flag on a studio output. Owner-only via RLS.
+ * Used by the "Add to portfolio" / "Make private" button on each
+ * output tile in the user's gallery.
+ */
+export async function togglePublicOutput(formData: FormData) {
+  const outputId = (formData.get("id") as string) ?? "";
+  const projectId = (formData.get("project_id") as string) ?? "";
+  const currentlyPublic =
+    (formData.get("currently_public") as string) === "true";
+  if (!outputId || !projectId) return;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await supabase
+    .from("studio_outputs")
+    .update({ is_public: !currentlyPublic })
+    .eq("id", outputId)
+    .eq("user_id", user.id);
+
+  revalidatePath(`/projects/${projectId}`);
+}

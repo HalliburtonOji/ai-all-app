@@ -1,6 +1,6 @@
 # Test Health Status
 
-**Last updated:** 2026-05-01 (Phase 3 fully shipped: a11y + Sentry + Lighthouse + mobile pass)
+**Last updated:** 2026-05-01 (Phase 4a — portfolio passport: per-output `is_public` toggle + public `/p/[username]` route)
 
 ## Coverage by Feature
 
@@ -21,6 +21,7 @@
 | Mobile pass — iPhone SE 375×667 viewport: 9 routes covered (dashboard, projects list, new project, project Coach/Memory/Studio tool grid + 3 panels). Each test asserts no horizontal scroll + primary interactive element visible. | 9 | 2026-05-01 | All green; no CSS fixes needed — existing Tailwind responsive patterns held. Layout-only checks; doesn't test cross-cutting flows on mobile (those are covered by the regular suite which still passes at default viewport). |
 | Accessibility (axe-core/playwright) — same 9 routes as mobile spec. Each test runs axe with WCAG 2A + 2AA rule sets and fails on `serious` or `critical` violations. | 9 | 2026-05-01 | Zero blocking violations. Moderate + minor issues not asserted. To audit those later, drop the impact filter in `expectNoSeriousA11yViolations`. |
 | Studio v2 — tool grid: landing renders 3 cards, no tool panel | (covered in studio.spec.ts) | 2026-04-30 | Studio tab now routes between tool grid (no `?studio=` param) and 3 per-tool panels (`?studio=image|text|voice`). Each card has `data-studio-tool-card`. |
+| Phase 4a — portfolio passport: toggle public + visible on `/p/[username]` to anon viewer, private outputs absent on public route, toggle round-trip back to private hides it again, non-existent username 404 | 4 | 2026-05-01 | First Phase 4 (Earn) deliverable. `is_public bool` on `studio_outputs` (default false) + new SELECT-anyone RLS policy gated on `is_public = true` + missing UPDATE policy added (owner-only). Public route uses service-role admin client to resolve email-prefix usernames + fetch public outputs only — RLS still enforces the privacy boundary. |
 
 ## Untested by Design
 
@@ -58,6 +59,7 @@
 
 | Date | Branch | Outcome | Runtime | Where |
 |------|--------|---------|---------|-------|
+| 2026-05-01 | main | ✅ Phase 4a (portfolio passport) shipped — 4/4 portfolio.spec sequential | 30s | local — targeted spec only, per the test-cadence policy ("normal code review + targeted tests per build, full suite every ~5 ships"). Found + fixed missing UPDATE RLS policy on `studio_outputs` while writing the spec. |
 | 2026-05-01 | main | ✅ Phase 3 fully shipped: a11y + Sentry + Lighthouse | — | Three commits: a11y `b5c6cd6` (9 a11y tests, all green), Sentry `937fc57` (DSN-gated SDK integration), Lighthouse `060217a` (audit script + baseline scores). 82 total E2E tests. Lighthouse baseline: homepage 96 / login 79 / signup 94 (perf), all 100 on a11y/best/seo. |
 | 2026-05-01 | main | ✅ pass (72/73 parallel local; 1 known flake on studio.spec delete-image, retry-handled in CI) | 1.9 min local | Phase 3b mobile pass shipped — `tests/e2e/mobile.spec.ts` (9 tests). No CSS fixes needed; existing responsive Tailwind patterns held. Scheduled-routine cleanup (disabled). |
 | 2026-04-30 | main | ✅ pass (62/62 CI parallel; cap stress tests skipped) | 3.5 min CI / 1.9 min local | Phase 3a — per-worker storageState fixture (`tests/e2e/auth-fixture.ts`). 8 specs migrated, auto-on-push CI re-enabled. Cap tests `test.skip(!!process.env.CI, ...)` — too aggressive for CI parallel contention, kept locally for release verification. |

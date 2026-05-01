@@ -169,7 +169,7 @@ export default async function ProjectDetailPage({
   const { data: outputRows } = await supabase
     .from("studio_outputs")
     .select(
-      "id, project_id, kind, prompt, content_text, storage_path, model, metadata, created_at",
+      "id, project_id, kind, prompt, content_text, storage_path, model, metadata, is_public, created_at",
     )
     .eq("project_id", project.id)
     .order("created_at", { ascending: false })
