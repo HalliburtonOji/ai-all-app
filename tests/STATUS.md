@@ -1,6 +1,6 @@
 # Test Health Status
 
-**Last updated:** 2026-05-01 (Phase 4b + 4c shipped — income tracker + pricing helper. Phase 4 / Earn v1 complete.)
+**Last updated:** 2026-05-01 (Phase 5 shipped — Learn v1: catalog, player, tutor mode, dashboard hint)
 
 ## Coverage by Feature
 
@@ -24,6 +24,7 @@
 | Phase 4a — portfolio passport: toggle public + visible on `/p/[username]` to anon viewer, private outputs absent on public route, toggle round-trip back to private hides it again, non-existent username 404 | 4 | 2026-05-01 | First Phase 4 (Earn) deliverable. `is_public bool` on `studio_outputs` (default false) + new SELECT-anyone RLS policy gated on `is_public = true` + missing UPDATE policy added (owner-only). Public route uses service-role admin client to resolve email-prefix usernames + fetch public outputs only — RLS still enforces the privacy boundary. |
 | Phase 4b — income tracker: add entry + persists, multi-currency totals, delete with confirm, RLS cross-user, CSV export with header, amount=0 server-side rejection | 6 | 2026-05-01 | `earnings` table with bigint cents + currency check (USD/GBP/NGN/KES/ZAR). No FX conversion — totals shown per currency. `/me/earnings` page with form + history + per-currency monthly CSS-bar chart. CSV export at `/api/me/earnings/export`. Per-test fresh signup pattern (entries are user-scoped → tests need isolated users). |
 | Phase 4c — pricing helper: refuses without context (`[pricing-refusal]` branch), gives range + caveat with context (`[pricing]` branch), non-pricing words skip the branch | 3 | 2026-05-01 | Coach system prompt now includes a pricing-questions block (refuse without context, give caveat-tagged range with context, never invent market data). Mock mode regex-detects pricing keywords (charge/rate/price/worth/etc.) and emits one of two deterministic markers so tests can assert the right branch fired. Real Anthropic in production follows the system prompt. |
+| Phase 5 — Learn v1: catalog renders both branches + lesson cards, opening a lesson auto-marks 'started', mark complete + toggle back persists across reload, tutor mode answers with lesson context (mock marker includes lesson title), non-existent slug 404, dashboard suggests Lesson 1 to fresh users + disappears once started, tutor endpoint rejects unauthenticated callers | 7 | 2026-05-01 | Lessons live as version-controlled markdown in `content/lessons/`. Auto-mark-started is inline in the page render (NOT a server action — that hits Next.js's "no revalidatePath during render" rule). Tutor mode is ephemeral (no DB persistence — the lesson is the durable artifact). Mock-mode tutor returns a deterministic marker that proves lesson context was injected. |
 
 ## Untested by Design
 
@@ -61,6 +62,7 @@
 
 | Date | Branch | Outcome | Runtime | Where |
 |------|--------|---------|---------|-------|
+| 2026-05-01 | main | ✅ Phase 5 shipped — 7/7 learn sequential (1 flaky, passed on retry) | 53s | local — targeted spec only. Found + fixed Next.js 16 "no revalidatePath during render" bug while writing the spec. |
 | 2026-05-01 | main | ✅ Phase 4b + 4c shipped — 9/9 earnings + pricing sequential | 39s | local — targeted specs only (earnings + pricing combined). Phase 4 / Earn v1 fully complete. |
 | 2026-05-01 | main | ✅ Phase 4a (portfolio passport) shipped — 4/4 portfolio.spec sequential | 30s | local — targeted spec only, per the test-cadence policy ("normal code review + targeted tests per build, full suite every ~5 ships"). Found + fixed missing UPDATE RLS policy on `studio_outputs` while writing the spec. |
 | 2026-05-01 | main | ✅ Phase 3 fully shipped: a11y + Sentry + Lighthouse | — | Three commits: a11y `b5c6cd6` (9 a11y tests, all green), Sentry `937fc57` (DSN-gated SDK integration), Lighthouse `060217a` (audit script + baseline scores). 82 total E2E tests. Lighthouse baseline: homepage 96 / login 79 / signup 94 (perf), all 100 on a11y/best/seo. |

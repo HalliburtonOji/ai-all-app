@@ -4,6 +4,7 @@ import { ProjectCard } from "@/components/ProjectCard";
 import type { Project } from "@/types/project";
 import type { UserFact } from "@/types/coach";
 import { UserMemoryPanel } from "./UserMemoryPanel";
+import { getFirstLesson } from "@/lib/learn/lessons";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -11,23 +12,32 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ data: projects }, { data: userFactRows }, { data: meta }] =
-    await Promise.all([
-      supabase
-        .from("projects")
-        .select("*")
-        .order("updated_at", { ascending: false })
-        .limit(3),
-      supabase
-        .from("user_facts")
-        .select("id, fact, source_project_id, pinned, created_at, updated_at")
-        .order("pinned", { ascending: false })
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("user_meta")
-        .select("user_facts_last_extracted_at")
-        .maybeSingle(),
-    ]);
+  const [
+    { data: projects },
+    { data: userFactRows },
+    { data: meta },
+    { data: lessonProgressRows },
+  ] = await Promise.all([
+    supabase
+      .from("projects")
+      .select("*")
+      .order("updated_at", { ascending: false })
+      .limit(3),
+    supabase
+      .from("user_facts")
+      .select("id, fact, source_project_id, pinned, created_at, updated_at")
+      .order("pinned", { ascending: false })
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("user_meta")
+      .select("user_facts_last_extracted_at")
+      .maybeSingle(),
+    supabase.from("user_lesson_progress").select("lesson_slug").limit(1),
+  ]);
+
+  const hasAnyLessonProgress =
+    !!lessonProgressRows && lessonProgressRows.length > 0;
+  const firstLesson = getFirstLesson();
 
   const recentProjects: Project[] = projects ?? [];
   const userFacts: UserFact[] = (userFactRows ?? []) as UserFact[];
@@ -62,6 +72,40 @@ export default async function DashboardPage() {
         hasExtractedYet={hasExtractedYet}
         isAdmin={isAdmin}
       />
+
+      {!hasAnyLessonProgress && (
+        <section
+          data-dashboard-suggested-lesson="true"
+          className="mt-8 rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950"
+        >
+          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+            Suggested for you
+          </p>
+          <h2 className="mt-1 text-lg font-semibold text-black dark:text-white">
+            Start with: {firstLesson.title}
+          </h2>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            {firstLesson.summary}
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-zinc-600 dark:text-zinc-400">
+            <span>{firstLesson.estimated_minutes} min</span>
+            <span aria-hidden>·</span>
+            <Link
+              href={`/learn/${firstLesson.slug}`}
+              data-dashboard-suggested-lesson-link="true"
+              className="rounded-md bg-black px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+            >
+              Open lesson
+            </Link>
+            <Link
+              href="/learn"
+              className="text-sm text-zinc-600 underline-offset-2 hover:underline dark:text-zinc-400"
+            >
+              Browse all lessons
+            </Link>
+          </div>
+        </section>
+      )}
 
       <section className="mt-10">
         <div className="mb-4 flex items-end justify-between">
