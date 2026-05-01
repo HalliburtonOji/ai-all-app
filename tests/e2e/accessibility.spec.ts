@@ -27,11 +27,16 @@ async function expectNoSeriousA11yViolations(
   );
   if (blocking.length > 0) {
     const summary = blocking
-      .map(
-        (v) =>
-          `[${v.impact}] ${v.id} — ${v.help} (nodes: ${v.nodes.length}) — ${v.helpUrl}`,
-      )
-      .join("\n");
+      .map((v) => {
+        const nodeDetails = v.nodes
+          .map(
+            (n) =>
+              `    target: ${n.target.join(" > ")}\n    html: ${n.html.slice(0, 200)}\n    failureSummary: ${n.failureSummary?.slice(0, 300) ?? "n/a"}`,
+          )
+          .join("\n");
+        return `[${v.impact}] ${v.id} — ${v.help} (nodes: ${v.nodes.length}) — ${v.helpUrl}\n${nodeDetails}`;
+      })
+      .join("\n\n");
     throw new Error(
       `axe-core found ${blocking.length} blocking violation(s):\n${summary}`,
     );

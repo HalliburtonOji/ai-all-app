@@ -608,7 +608,7 @@ function MessageBubble({
           safeContent
         ) : isToolPlaceholder ? (
           <span
-            className="flex items-center gap-2 italic text-zinc-500"
+            className="flex items-center gap-2 italic text-zinc-600 dark:text-zinc-400"
             data-coach-tool-loading="true"
           >
             <StreamingCursor />
@@ -654,7 +654,7 @@ function MessageBubble({
             </p>
             <Link
               href={`/projects/${projectId}?tab=studio&studio=text`}
-              className="text-xs italic text-zinc-500 underline-offset-2 hover:underline dark:text-zinc-400"
+              className="text-xs italic text-zinc-600 underline-offset-2 hover:underline dark:text-zinc-400"
             >
               Open in Studio →
             </Link>
@@ -678,7 +678,7 @@ function MessageBubble({
             )}
             <Link
               href={`/projects/${projectId}?tab=studio&studio=voice`}
-              className="text-xs italic text-zinc-500 underline-offset-2 hover:underline dark:text-zinc-400"
+              className="text-xs italic text-zinc-600 underline-offset-2 hover:underline dark:text-zinc-400"
             >
               Open in Studio →
             </Link>
@@ -708,7 +708,7 @@ function MessageBubble({
             </button>
           </div>
         ) : isStreaming && isEmpty ? (
-          <span className="italic text-zinc-500">Coach is thinking…</span>
+          <span className="italic text-zinc-600 dark:text-zinc-400">Coach is thinking…</span>
         ) : (
           <>
             <CoachMarkdown content={safeContent} />
