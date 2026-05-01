@@ -107,7 +107,7 @@ export default async function LessonPage({ params }: PageProps) {
                 className={
                   isComplete
                     ? "w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-black transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800"
-                    : "w-full rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600"
+                    : "w-full rounded-md bg-emerald-700 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-800 dark:bg-emerald-700 dark:hover:bg-emerald-600"
                 }
               >
                 {isComplete ? "Mark as not done" : "Mark as complete"}

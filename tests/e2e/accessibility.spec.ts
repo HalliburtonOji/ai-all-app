@@ -130,4 +130,54 @@ test.describe("Accessibility — WCAG A/AA, blocking violations only", () => {
     await expect(page.getByLabel("Voice-over script")).toBeVisible();
     await expectNoSeriousA11yViolations(page);
   });
+
+  // Phase 4 + 5 + 6 routes — added later but using the same shape.
+
+  test("/me/earnings (Phase 4b)", async ({ page }) => {
+    await page.goto("/me/earnings");
+    await expect(
+      page.getByRole("heading", { name: /What you've made/ }),
+    ).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+  });
+
+  test("/learn (Phase 5) catalog", async ({ page }) => {
+    await page.goto("/learn");
+    await expect(
+      page.getByRole("heading", { name: /Get genuinely good at AI/ }),
+    ).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+  });
+
+  test("/learn/[slug] (Phase 5) lesson player + tutor sidebar", async ({
+    page,
+  }) => {
+    await page.goto("/learn/foundations-01-what-is-ai");
+    await expect(
+      page.getByRole("heading", { name: "What's actually in the AI box" }),
+    ).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+  });
+
+  test("/welcome (Phase 6a) wizard", async ({ page }) => {
+    await page.goto("/welcome");
+    await expect(page.locator('[data-welcome-wizard="true"]')).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+  });
+
+  test("/wins (Phase 6b) public feed", async ({ page }) => {
+    await page.goto("/wins");
+    await expect(
+      page.getByRole("heading", { name: /What people are shipping/ }),
+    ).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+  });
+
+  test("/community/failures (Phase 6c) forum", async ({ page }) => {
+    await page.goto("/community/failures");
+    await expect(
+      page.getByRole("heading", { name: /Failure forum/ }),
+    ).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+  });
 });

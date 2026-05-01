@@ -111,6 +111,7 @@ export function WelcomeWizard() {
                   onClick={() => setRole(opt.value)}
                   data-welcome-role={opt.value}
                   data-selected={selected}
+                  aria-pressed={selected}
                   className={
                     selected
                       ? "rounded-lg border-2 border-black bg-zinc-50 p-3 text-left dark:border-white dark:bg-zinc-900"

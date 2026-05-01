@@ -206,7 +206,7 @@ Workflow recorder, template gallery, marketplace, opportunity radar, client CRM,
 | **Onboarding flow (Phase 6a)** | `/welcome` 3-step wizard (role · goal · optional first project), saves answers as pinned `user_facts`. Dashboard banner shows for users with zero `user_facts` and naturally vanishes once any are added. Every screen is skippable. |
 | **Wins feed (Phase 6b)** | Public route `/wins` — aggregated feed of every public Studio output across all users. New `output_likes` table (anyone-SELECT for counts, owner-only INSERT/DELETE). Like button per tile, disabled for anonymous viewers. Like-toggle endpoint at `/api/wins/like`. NavBar entry. |
 | **Failure forum (Phase 6c)** | Auth-gated route `/community/failures` — community journal of things that didn't work. New `failure_notes` table (auth-only SELECT, owner-only INSERT/DELETE). 5-posts-per-24h rolling rate limit enforced server-side. Two-step delete confirm. NavBar entry. |
-| **Tests** | 110 Playwright E2E tests (62 CI parallel + 9 mobile + 9 accessibility + 4 portfolio + 6 earnings + 3 pricing + 7 learn + 8 onboarding-community + 2 cap stress local-only). Per-worker auth fixture (`tests/e2e/auth-fixture.ts`). Local full suite ~2 min parallel, CI ~3.5 min. |
+| **Tests** | 122 Playwright E2E tests (62 CI parallel + 15 mobile + 15 accessibility + 4 portfolio + 6 earnings + 3 pricing + 7 learn + 8 onboarding-community + 2 cap stress local-only). Per-worker auth fixture (`tests/e2e/auth-fixture.ts`). Local full suite ~2 min parallel, CI ~3.5 min. |
 | **Mobile + Accessibility** | `tests/e2e/mobile.spec.ts` (9 routes at 375px, no horizontal overflow) + `tests/e2e/accessibility.spec.ts` (axe-core, 9 routes, zero serious/critical WCAG A/AA violations). |
 | **Error monitoring** | Sentry SDK wired in (`@sentry/nextjs`, `sentry.{server,edge}.config.ts`, `instrumentation.ts`, `instrumentation-client.ts`, `next.config.ts` wrapped). DSN-gated; no-op until Halli adds `SENTRY_DSN` + `NEXT_PUBLIC_SENTRY_DSN` to Vercel. |
 | **Performance baseline** | `npm run lighthouse` audits homepage/login/signup against the live deploy. Current: homepage 96/100/100/100, login 79/100/100/100, signup 94/100/100/100. |
@@ -284,6 +284,41 @@ Same four keys as above. Used by both workflows.
 ## 14. Session Log
 
 > Add a new entry to the **top** of this list for each work session. Include: date, what shipped, decisions made, and anything left dangling.
+
+### 2026-05-01 (autonomous polish) — Lesson catalog at full size + mobile/a11y sweep on new routes
+
+After Phases 1–6 landed, kept building autonomously while Halli was away. Goal: bring the Phase 5 lesson catalog up to its master-plan target, and extend the existing mobile + a11y specs so the new Phase 4–6 routes are covered alongside the rest.
+
+**Shipped:**
+- 6 more lessons (target reached: 6 + 6 = 12 total per the master plan):
+  - Foundations: 04 — tokens & context, 05 — when models update, 06 — AI and your job
+  - Prompt Craft: 04 — roles & context, 05 — three reusable templates, 06 — anti-patterns
+  - Same wholesome tone as the seed 6. Each ~250–500 words. Zero registry/UI changes — registry just enumerates `content/lessons/*.md` + sorts by branch then `order`.
+- [tests/e2e/mobile.spec.ts](tests/e2e/mobile.spec.ts): +6 new mobile checks at iPhone SE viewport (`/me/earnings`, `/learn`, `/learn/[slug]`, `/welcome`, `/wins`, `/community/failures`). All green on first try — existing responsive Tailwind patterns held.
+- [tests/e2e/accessibility.spec.ts](tests/e2e/accessibility.spec.ts): +6 axe-core sweeps on the same routes. **Caught one serious WCAG AA color-contrast violation** on the lesson player's "Mark as complete" button (`bg-emerald-600` + white text → 3.65 : 1; need 4.5 : 1). Fixed by bumping to `bg-emerald-700` (`#047857`) which clears the bar.
+- Welcome wizard role-selection buttons gained `aria-pressed` (proactive a11y polish — assistive tech now announces selection state).
+
+**Project-wide totals after this:**
+- 12 lessons total (Foundations + Prompt Craft branches each at master-plan size)
+- 122 E2E tests (62 CI parallel + 15 mobile + 15 a11y + 4 portfolio + 6 earnings + 3 pricing + 7 learn + 8 onboarding-community + 2 cap stress local-only)
+- All five product layers live + onboarding flow + 12 lessons + welcome / wins / failures community routes
+
+**Decisions:**
+- **No new specs for Phase 4+ + 6 routes' mobile/a11y** — folded the coverage into the existing `mobile.spec.ts` and `accessibility.spec.ts`. Keeping the per-route sweeps in one file each makes "is the whole app mobile-clean / a11y-clean" a one-spec-grep question.
+- **Color contrast fix was a class swap, not a custom utility.** `emerald-700` is a step darker than `emerald-600`; the visual difference is small but the contrast difference is meaningful. No need to introduce a new color palette.
+- **Lesson 04–06 in each branch builds on 01–03.** Foundations 04 (tokens) references the "limit + workaround" pattern from 01. Prompt Craft 06 (anti-patterns) explicitly inverts the moves taught in 01–05. Adding more later (Tool Fluency, Career & Money) would be a third branch, not pile-on in existing ones.
+
+**Robustness checklist (post-Phase-6 polish):**
+- ✅ All 12 lessons loadable + listed in catalog (build-time check via registry).
+- ✅ All major routes pass mobile-overflow check at 375px.
+- ✅ All major routes clean of `serious`/`critical` axe violations.
+- ✅ Type-check + production build clean.
+
+**Phase tally:**
+- Phases 1–6 ✅ shipped (all five product layers + onboarding + community)
+- Phase 5's content target reached (12 lessons across 2 branches)
+- Mobile / a11y coverage caught up to current route map
+- Original 12-week MVP plan: feature-complete except deferred items (BYOK + Stripe payments, Work layer, Studio tools 4+, Skill tree branches 3–5, marketplace, opportunity radar, etc.).
 
 ### 2026-05-01 (autonomous run) — Phase 6: Onboarding + community v1 (welcome + wins + failures)
 

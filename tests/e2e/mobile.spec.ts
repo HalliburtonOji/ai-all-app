@@ -150,4 +150,78 @@ test.describe("Mobile pass — iPhone SE 375px", () => {
     ).toBeVisible();
     await expectNoHorizontalScroll(page, IPHONE_SE_VIEWPORT.width);
   });
+
+  // Phase 4 + 5 + 6 routes — added later but using the same shape.
+
+  test("/me/earnings (Phase 4b) renders + form reachable", async ({ page }) => {
+    await page.goto("/me/earnings");
+    await expect(
+      page.getByRole("heading", { name: /What you've made/ }),
+    ).toBeVisible();
+    await expect(
+      page.locator('[data-earning-input="amount"]'),
+    ).toBeVisible();
+    await expect(
+      page.locator('[data-earning-submit="true"]'),
+    ).toBeVisible();
+    await expectNoHorizontalScroll(page, IPHONE_SE_VIEWPORT.width);
+  });
+
+  test("/learn (Phase 5) catalog renders both branches", async ({ page }) => {
+    await page.goto("/learn");
+    await expect(
+      page.getByRole("heading", { name: /Get genuinely good at AI/ }),
+    ).toBeVisible();
+    await expect(
+      page.locator('[data-learn-branch="foundations"]'),
+    ).toBeVisible();
+    await expect(
+      page.locator('[data-learn-branch="prompt-craft"]'),
+    ).toBeVisible();
+    await expectNoHorizontalScroll(page, IPHONE_SE_VIEWPORT.width);
+  });
+
+  test("/learn/[slug] player + tutor sidebar reachable", async ({ page }) => {
+    await page.goto("/learn/foundations-01-what-is-ai");
+    await expect(
+      page.getByRole("heading", { name: "What's actually in the AI box" }),
+    ).toBeVisible();
+    await expect(
+      page.locator('[data-lesson-status-card="true"]'),
+    ).toBeVisible();
+    await expect(page.locator('[data-lesson-tutor="true"]')).toBeVisible();
+    await expectNoHorizontalScroll(page, IPHONE_SE_VIEWPORT.width);
+  });
+
+  test("/welcome (Phase 6a) wizard reachable", async ({ page }) => {
+    await page.goto("/welcome");
+    await expect(page.locator('[data-welcome-wizard="true"]')).toBeVisible();
+    await expect(page.locator('[data-welcome-role="builder"]')).toBeVisible();
+    await expect(page.locator('[data-welcome-next="true"]')).toBeVisible();
+    await expectNoHorizontalScroll(page, IPHONE_SE_VIEWPORT.width);
+  });
+
+  test("/wins (Phase 6b) feed renders", async ({ page }) => {
+    await page.goto("/wins");
+    await expect(
+      page.getByRole("heading", { name: /What people are shipping/ }),
+    ).toBeVisible();
+    await expectNoHorizontalScroll(page, IPHONE_SE_VIEWPORT.width);
+  });
+
+  test("/community/failures (Phase 6c) post form reachable", async ({
+    page,
+  }) => {
+    await page.goto("/community/failures");
+    await expect(
+      page.getByRole("heading", { name: /Failure forum/ }),
+    ).toBeVisible();
+    await expect(
+      page.locator('[data-failure-post-input="true"]'),
+    ).toBeVisible();
+    await expect(
+      page.locator('[data-failure-post-submit="true"]'),
+    ).toBeVisible();
+    await expectNoHorizontalScroll(page, IPHONE_SE_VIEWPORT.width);
+  });
 });
