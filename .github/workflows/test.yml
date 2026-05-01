@@ -1,16 +1,18 @@
 name: Tests
 
-# Re-enabled auto-on-push 2026-04-30 after Phase 3a's per-worker
-# storageState refactor (tests/e2e/auth-fixture.ts). With 4 parallel
-# workers + 1 retry the suite runs in ~2 min reliably; the previous
-# 15-min sequential cost is gone. Manual trigger preserved for
-# on-demand runs.
+# Manual-trigger only (changed back 2026-05-01). Auto-on-push was
+# re-enabled briefly with Phase 3a's storageState refactor, but the
+# fix → CI-fail → fix cycle has been burning more usage than the
+# auto-validation was saving. Until I stop introducing new
+# test-flake categories on each phase ship, this stays manual.
+#
+# Vercel's deploy still gates type-checks + builds on every push.
+# Local `npm run test:e2e` covers regression catching. This workflow
+# fires only when explicitly requested (Actions UI → Run workflow).
 on:
-  push:
-    branches: ["**"]
+  workflow_dispatch:
   pull_request:
     branches: [main]
-  workflow_dispatch:
 
 jobs:
   e2e:
