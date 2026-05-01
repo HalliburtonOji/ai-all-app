@@ -39,6 +39,13 @@ const MOCK_TRIGGER_VOICE =
   /\b(voice|narrate|speak|read.{0,12}aloud|read.{0,12}out.{0,12}loud|tts)\b/i;
 const MOCK_TRIGGER_TEXT =
   /\b(draft|write|copy|email|caption|tweet|post|headline)\b/i;
+// Pricing intent — checked BEFORE tool triggers so "what should I
+// charge for a logo?" is treated as a pricing question, not an image
+// request. The mock branch responds two ways: if the user has any
+// project facts (memory context), it returns a fact-aware range; if
+// not, it refuses and asks for context (per the wholesome charter).
+const MOCK_TRIGGER_PRICING =
+  /\b(charge|rate|price|pricing|worth|how much (should|do)|what.*charge)\b/i;
 
 const MESSAGE_SELECT =
   "id, role, content, model, input_tokens, output_tokens, partial, tool_call, studio_output_id, created_at";
@@ -196,6 +203,14 @@ export async function POST(request: Request) {
           const userMemorySuffix =
             userFacts.length > 0 ? ` [user-memory: ${userFacts.length}]` : "";
 
+          // Pricing intent fires BEFORE tool selection so "what should
+          // I charge for a logo?" lands as a pricing question rather
+          // than an image request. Two branches: with-context returns a
+          // fact-aware range; no-context refuses and asks for context.
+          const isPricingQuestion = MOCK_TRIGGER_PRICING.test(trimmed);
+          const hasAnyContext =
+            memoryFacts.length > 0 || userFacts.length > 0;
+
           // Pick a tool based on which trigger matched. Order is
           // image > voice > text so a message mentioning both "draw"
           // and "write" picks image (more specific intent for the
@@ -205,7 +220,10 @@ export async function POST(request: Request) {
             preamble: string;
             input: Record<string, unknown>;
           } | null = null;
-          if (MOCK_TRIGGER_IMAGE.test(trimmed)) {
+          if (isPricingQuestion) {
+            // Pricing answers are always plain text — no tool.
+            mockTool = null;
+          } else if (MOCK_TRIGGER_IMAGE.test(trimmed)) {
             mockTool = {
               name: "studio_image_generate",
               preamble: "I'll draw that for you",
@@ -245,6 +263,32 @@ export async function POST(request: Request) {
               name: mockTool.name,
               input: mockTool.input,
             };
+          } else if (isPricingQuestion) {
+            // Pricing intent: refuse without context, give a range
+            // (with caveat) when context exists. Markers in the text
+            // let the spec assert the right branch fired.
+            const chunks = hasAnyContext
+              ? [
+                  "[mock] ",
+                  "[pricing] ",
+                  "Based on what I know about your project, ",
+                  "a typical range is $100–$300. ",
+                  "Caveat: pricing depends on factors I can't verify.",
+                  memorySuffix,
+                  userMemorySuffix,
+                ]
+              : [
+                  "[mock] ",
+                  "[pricing-refusal] ",
+                  "I'd need more context to suggest a price. ",
+                  "Tell me what you're delivering, who the client is, ",
+                  "and what country you're billing from.",
+                ];
+            for (const chunk of chunks.filter((c) => c.length > 0)) {
+              fullContent += chunk;
+              controller.enqueue(frame("text", { delta: chunk }));
+              await new Promise((r) => setTimeout(r, 30));
+            }
           } else {
             // Existing chatty mock — no tool, just text.
             const chunks = [

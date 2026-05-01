@@ -25,6 +25,12 @@ export function NavBar({ email }: { email: string }) {
             >
               Projects
             </Link>
+            <Link
+              href="/me/earnings"
+              className="text-zinc-700 transition-colors hover:text-black dark:text-zinc-300 dark:hover:text-white"
+            >
+              Earnings
+            </Link>
           </div>
         </div>
         <div className="flex items-center gap-3 sm:gap-4">

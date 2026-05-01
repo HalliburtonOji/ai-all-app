@@ -1,6 +1,6 @@
 # Test Health Status
 
-**Last updated:** 2026-05-01 (Phase 4a — portfolio passport: per-output `is_public` toggle + public `/p/[username]` route)
+**Last updated:** 2026-05-01 (Phase 4b + 4c shipped — income tracker + pricing helper. Phase 4 / Earn v1 complete.)
 
 ## Coverage by Feature
 
@@ -22,6 +22,8 @@
 | Accessibility (axe-core/playwright) — same 9 routes as mobile spec. Each test runs axe with WCAG 2A + 2AA rule sets and fails on `serious` or `critical` violations. | 9 | 2026-05-01 | Zero blocking violations. Moderate + minor issues not asserted. To audit those later, drop the impact filter in `expectNoSeriousA11yViolations`. |
 | Studio v2 — tool grid: landing renders 3 cards, no tool panel | (covered in studio.spec.ts) | 2026-04-30 | Studio tab now routes between tool grid (no `?studio=` param) and 3 per-tool panels (`?studio=image|text|voice`). Each card has `data-studio-tool-card`. |
 | Phase 4a — portfolio passport: toggle public + visible on `/p/[username]` to anon viewer, private outputs absent on public route, toggle round-trip back to private hides it again, non-existent username 404 | 4 | 2026-05-01 | First Phase 4 (Earn) deliverable. `is_public bool` on `studio_outputs` (default false) + new SELECT-anyone RLS policy gated on `is_public = true` + missing UPDATE policy added (owner-only). Public route uses service-role admin client to resolve email-prefix usernames + fetch public outputs only — RLS still enforces the privacy boundary. |
+| Phase 4b — income tracker: add entry + persists, multi-currency totals, delete with confirm, RLS cross-user, CSV export with header, amount=0 server-side rejection | 6 | 2026-05-01 | `earnings` table with bigint cents + currency check (USD/GBP/NGN/KES/ZAR). No FX conversion — totals shown per currency. `/me/earnings` page with form + history + per-currency monthly CSS-bar chart. CSV export at `/api/me/earnings/export`. Per-test fresh signup pattern (entries are user-scoped → tests need isolated users). |
+| Phase 4c — pricing helper: refuses without context (`[pricing-refusal]` branch), gives range + caveat with context (`[pricing]` branch), non-pricing words skip the branch | 3 | 2026-05-01 | Coach system prompt now includes a pricing-questions block (refuse without context, give caveat-tagged range with context, never invent market data). Mock mode regex-detects pricing keywords (charge/rate/price/worth/etc.) and emits one of two deterministic markers so tests can assert the right branch fired. Real Anthropic in production follows the system prompt. |
 
 ## Untested by Design
 
@@ -59,6 +61,7 @@
 
 | Date | Branch | Outcome | Runtime | Where |
 |------|--------|---------|---------|-------|
+| 2026-05-01 | main | ✅ Phase 4b + 4c shipped — 9/9 earnings + pricing sequential | 39s | local — targeted specs only (earnings + pricing combined). Phase 4 / Earn v1 fully complete. |
 | 2026-05-01 | main | ✅ Phase 4a (portfolio passport) shipped — 4/4 portfolio.spec sequential | 30s | local — targeted spec only, per the test-cadence policy ("normal code review + targeted tests per build, full suite every ~5 ships"). Found + fixed missing UPDATE RLS policy on `studio_outputs` while writing the spec. |
 | 2026-05-01 | main | ✅ Phase 3 fully shipped: a11y + Sentry + Lighthouse | — | Three commits: a11y `b5c6cd6` (9 a11y tests, all green), Sentry `937fc57` (DSN-gated SDK integration), Lighthouse `060217a` (audit script + baseline scores). 82 total E2E tests. Lighthouse baseline: homepage 96 / login 79 / signup 94 (perf), all 100 on a11y/best/seo. |
 | 2026-05-01 | main | ✅ pass (72/73 parallel local; 1 known flake on studio.spec delete-image, retry-handled in CI) | 1.9 min local | Phase 3b mobile pass shipped — `tests/e2e/mobile.spec.ts` (9 tests). No CSS fixes needed; existing responsive Tailwind patterns held. Scheduled-routine cleanup (disabled). |

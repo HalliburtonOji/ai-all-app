@@ -200,7 +200,9 @@ Workflow recorder, template gallery, marketplace, opportunity radar, client CRM,
 | **Coach × Studio (Phase 1)** | Coach gains tool-using ability. SSE events `tool_started` / `tool_result` / `tool_failed`. Inline image bubbles in chat. Memory-aware Studio prompts. "Refine with coach" button. Recent-activity strip on project header. |
 | **Studio v2 (Phase 2)** | One `studio_outputs` superset table hosts image / text / audio. Three tools: image (Replicate FLUX schnell), copy/email drafter (Anthropic Sonnet 4.6), voice-over (ElevenLabs Flash v2.5, 500-char ≤30s clips). Tool-grid landing, per-tool panels, kind-aware coach bubbles. |
 | **Portfolio passport (Phase 4a)** | Per-output `is_public` opt-in (default false) on `studio_outputs`. New owner-only UPDATE RLS policy + anyone-can-SELECT-where-public policy. Public route `/p/[username]` (service-role lookup by sanitized email prefix) renders public outputs only with kind-aware tiles. "Add to portfolio" / "Public" toggle in the Studio gallery. |
-| **Tests** | 86 Playwright E2E tests (62 CI parallel + 9 mobile + 9 accessibility + 4 portfolio + 2 cap stress local-only). Per-worker auth fixture (`tests/e2e/auth-fixture.ts`). Local full suite ~2 min parallel, CI ~3.5 min. |
+| **Income tracker (Phase 4b)** | New `earnings` table (RLS owner-only, amount stored as cents). `/me/earnings` page with add-form, monthly per-currency CSS-bar chart, lifetime totals per currency, two-step delete confirm. Currency-aware (USD / GBP / NGN / KES / ZAR), no FX. CSV export at `/api/me/earnings/export`. NavBar entry. |
+| **Pricing helper (Phase 4c)** | System-prompt block telling the coach to refuse pricing questions without context and give a caveat-tagged range with context. Mock-mode `[pricing]` / `[pricing-refusal]` branches (regex-detected) for deterministic tests. Wholesome-charter guarantee: never invent market data, never auto-quote without context. |
+| **Tests** | 95 Playwright E2E tests (62 CI parallel + 9 mobile + 9 accessibility + 4 portfolio + 6 earnings + 3 pricing + 2 cap stress local-only). Per-worker auth fixture (`tests/e2e/auth-fixture.ts`). Local full suite ~2 min parallel, CI ~3.5 min. |
 | **Mobile + Accessibility** | `tests/e2e/mobile.spec.ts` (9 routes at 375px, no horizontal overflow) + `tests/e2e/accessibility.spec.ts` (axe-core, 9 routes, zero serious/critical WCAG A/AA violations). |
 | **Error monitoring** | Sentry SDK wired in (`@sentry/nextjs`, `sentry.{server,edge}.config.ts`, `instrumentation.ts`, `instrumentation-client.ts`, `next.config.ts` wrapped). DSN-gated; no-op until Halli adds `SENTRY_DSN` + `NEXT_PUBLIC_SENTRY_DSN` to Vercel. |
 | **Performance baseline** | `npm run lighthouse` audits homepage/login/signup against the live deploy. Current: homepage 96/100/100/100, login 79/100/100/100, signup 94/100/100/100. |
@@ -278,6 +280,55 @@ Same four keys as above. Used by both workflows.
 ## 14. Session Log
 
 > Add a new entry to the **top** of this list for each work session. Include: date, what shipped, decisions made, and anything left dangling.
+
+### 2026-05-01 (even later still) — Phase 4b + 4c: income tracker + pricing helper
+
+Phase 4 finished. Earn v1 now has all three deliverables: portfolio passport (4a), income tracker (4b), pricing helper (4c). The L→D→**E** loop is complete enough to demonstrate that the app helps users *make* money, *track* what they made, and *get help thinking about pricing*.
+
+**Phase 4b — Income tracker. Shipped:**
+- Migration [supabase/migrations/20260501103452_add_earnings_table.sql](supabase/migrations/20260501103452_add_earnings_table.sql): new `earnings` table with `amount_cents bigint`, currency check (NGN / KES / ZAR / GBP / USD), source ≤200 chars, occurred_on date, optional note ≤500 chars + project_id FK, RLS owner-only (select / insert / delete). Composite index `(user_id, occurred_on desc)`.
+- Money type [src/types/earnings.ts](src/types/earnings.ts): `Currency` union, `SUPPORTED_CURRENCIES` order (USD first because that's how most users start), `CURRENCY_SYMBOLS` table, `formatAmount(cents, currency)` using Intl.NumberFormat for thousands separators + the symbol table for consistent display. No FX conversion at v1 — each currency stands alone.
+- New page [src/app/(app)/me/earnings/page.tsx](src/app/(app)/me/earnings/page.tsx) with three components: [AddEarningForm.tsx](src/app/(app)/me/earnings/AddEarningForm.tsx) (amount, currency, source, date, optional project, optional note — server-action wired with `useTransition`), [EarningRow.tsx](src/app/(app)/me/earnings/EarningRow.tsx) (one row per entry, two-step delete confirm), [EarningsChart.tsx](src/app/(app)/me/earnings/EarningsChart.tsx) (CSS-bar monthly chart per currency, no chart lib).
+- Server actions [src/app/(app)/me/earnings/actions.ts](src/app/(app)/me/earnings/actions.ts): `addEarning` (validates amount > 0, currency in allowed set, source non-empty + ≤200 chars, project ownership when supplied, returns `AddEarningResult`), `deleteEarning` (RLS-checked).
+- CSV export [src/app/api/me/earnings/export/route.ts](src/app/api/me/earnings/export/route.ts) — owner-only via auth gate, returns `text/csv` with Content-Disposition. Header row `date,amount,currency,source,note,project_id,created_at`. Properly CSV-escapes quotes/commas/newlines in the source + note fields.
+- NavBar entry: "Earnings" link added to [src/components/NavBar.tsx](src/components/NavBar.tsx).
+- 6 new E2E tests in [tests/e2e/earnings.spec.ts](tests/e2e/earnings.spec.ts): add-entry happy path + persistence, multi-currency totals, delete with confirm, cross-user RLS, CSV export, amount=0 rejection (server-side check). Per-test fresh signup (matches portfolio.spec pattern) — each test owns its own data.
+
+**Phase 4c — Pricing helper. Shipped:**
+- System prompt [src/lib/coach/system-prompt.ts](src/lib/coach/system-prompt.ts) gains a "Pricing questions" block: respond with a realistic range when there's meaningful project/user context (with a one-line caveat that pricing depends on factors the coach can't verify); refuse and ask for context when there isn't. Explicitly forbids inventing market data or citing platform rates as live numbers. Wholesome charter compliance baked into the prompt itself.
+- Mock-mode pricing branch in [src/app/api/coach/stream/route.ts](src/app/api/coach/stream/route.ts): new `MOCK_TRIGGER_PRICING` regex (charge / rate / price / pricing / worth / "how much should") fires BEFORE tool selection so "what should I charge for a logo?" lands as a pricing question, not an image request. Two branches: with-context emits `[mock] [pricing] …` plus a range + caveat; no-context emits `[mock] [pricing-refusal] …` + asks for context. Both branches are no-tool plain text.
+- 3 new E2E tests in [tests/e2e/pricing.spec.ts](tests/e2e/pricing.spec.ts): refusal-without-context, range-with-caveat-when-memory-exists, non-pricing-words-don't-trigger-the-branch.
+
+**Total project E2E count:** 95 (62 CI parallel + 9 mobile + 9 a11y + 4 portfolio + 6 earnings + 3 pricing + 2 cap stress local-only).
+
+**Decisions:**
+- **Per-row currency, no FX conversion at v1.** Each entry has its own currency, totals shown per currency. Adding rate-aware totals would mean either (a) a stored fixed rate at entry time (clutters the schema, gets stale), or (b) a live FX call (introduces an external dep + cost). For a manual log used by one human at a time, the per-currency totals are honest and obvious — the user knows what each currency represents in their life.
+- **`amount_cents bigint` not numeric.** Avoids float arithmetic on money. Good enough for $1B per entry; the check constraint caps at 100B cents which is well above realistic.
+- **No chart library.** A CSS-bar monthly chart is enough for v1 and ships zero new deps. The "honest visualisation" comment is intentional — no FX conversion + each currency on its own axis means a user can't squint at a single big number and miss that they have a tiny USD pile and a moderate NGN pile (which mix differently from a single converted total).
+- **Worker fixture vs per-test signup.** I tried using the worker fixture's shared `page` but earnings accumulate across tests (user-scoped, not project-scoped). The cleanest fix was per-test `browser.newContext()` + `signUpNewUser`. Slower but stable, and signup is fast in mock mode.
+- **Pricing intent in mock mode is regex-based, not LLM-driven.** The real coach (Sonnet 4.6 in production) follows the system prompt's pricing-rules block. The mock branch fakes that behavior deterministically so the test mode can verify the wholesome-charter guarantee (refuse without context) without burning Anthropic credits.
+- **Mock pricing markers `[pricing]` / `[pricing-refusal]`** — two distinct tags so a test can assert the right branch fired. Same pattern as the existing `[memory: N]` and `[user-memory: N]` suffixes for memory-injection tests.
+
+**Hiccups + fixes:**
+- Earnings spec failed 4/6 on first run — the worker fixture's user accumulated entries across tests, so `count = 1` assertions broke after test 1's entry persisted. Switched to per-test fresh `browser.newContext()` + `signUpNewUser`. 6/6 green at 14s sequential.
+- Worker storageState files from earlier sessions were on disk but not the source of the failure (they regenerated cleanly). Kept the auth-fixture `existsSync` short-circuit — it's fine for specs that share state across tests within a worker, like coach.spec or studio.spec.
+- "Controller is already closed" SSE log noise on pricing tests — same harmless teardown race that other coach specs surface. Pre-existing.
+
+**Robustness checklist (Phase 4 gate, all three sub-items):**
+- ✅ E2E coverage: 13 new tests across 4a + 4b + 4c, all green sequentially.
+- ✅ Public route never leaks private data (4a regression test).
+- ✅ Currency arithmetic correct (4b multi-currency totals + CSV roundtrip).
+- ✅ Pricing helper's caveats present in both branches (4c spec asserts the caveat text and the refusal text directly).
+- ✅ Type-check + production build clean.
+- ⏳ Real-deploy spot-check after Vercel ships — Halli to verify.
+- ⏳ Mobile pass / a11y check on the new `/me/earnings` and `/p/[username]` routes — deferred to a future sweep (low risk; both pages use the existing responsive Tailwind patterns).
+
+**Phase 4 progress (per master plan §16):** ✅ all three sub-items shipped.
+
+**Next session candidates per master plan:**
+- **Phase 5 — Learn v1**: lesson player at `/learn/:slug`, ~6 Foundations + ~6 Prompt Craft markdown lessons, `user_lesson_progress` table, tutor-mode coach with lesson context injected, Lesson 1 auto-suggestion on first signup. ~4 sessions.
+- **Phase 6 — Onboarding + community v1**: 3-screen welcome flow, curated empty states, wins feed (opt-in), failure forum (logged-in only). ~3 sessions.
+- After 6: BYOK + Stripe payments and the Work layer come next per the original 12-week plan.
 
 ### 2026-05-01 (even later) — Phase 4a: portfolio passport
 
@@ -802,14 +853,14 @@ Guiding principles for every phase:
 **Deliverables:** per-worker `storageState` Playwright refactor (~5 signups/run instead of 60) · Sentry (or equivalent) wired client + server · accessibility pass (keyboard nav, aria, focus) · performance pass (Lighthouse ≥90) · mobile pass.
 **Robustness bar:** full E2E suite <2 min, zero flakes across 5 consecutive runs · Lighthouse ≥90 on top-4 routes · WCAG AA basics verified · CI green.
 
-### Phase 4 — Earn v1 · ~3 sessions (4a shipped 2026-05-01)
+### Phase 4 — Earn v1 · ✅ shipped 2026-05-01 (all three sub-items)
 **Goal:** L→D→**E** loop becomes visible. The first feature where the app demonstrably helps users *make money*.
 **Deliverables:**
 - ✅ **4a: portfolio passport** — per-output opt-in toggle → public `/p/[username]` route. Shipped 2026-05-01 with 4 E2E tests + missing UPDATE-policy fix on `studio_outputs`.
-- ⏳ **4b: income tracker** — `/me/earnings`, manual log + CSV export + cumulative chart, currency-aware (NGN/KES/ZAR/GBP/USD).
-- ⏳ **4c: pricing helper** — coach intent (uses memory + market-data prompt, refuses without context).
+- ✅ **4b: income tracker** — `/me/earnings` with manual log, CSV export, monthly per-currency chart. Currency-aware (NGN / KES / ZAR / GBP / USD), no FX conversion. 6 E2E tests.
+- ✅ **4c: pricing helper** — coach system prompt block + mock-mode regex branch. Refuses without context, gives a range with caveat when memory exists. 3 E2E tests.
 
-**Robustness bar:** public route never leaks private data (explicit RLS test) · currency arithmetic correct · pricing helper's caveats present (wholesome charter).
+**Robustness bar (cleared):** public route never leaks private data (explicit RLS test) · currency arithmetic correct (multi-currency totals + CSV roundtrip) · pricing helper's caveats present (asserted in spec, baked into system prompt).
 
 ### Phase 5 — Learn v1 · ~4 sessions
 **Goal:** Classroom layer is real. Foundations + Prompt Craft anchor the "learn" identity.
