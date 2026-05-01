@@ -1,6 +1,6 @@
 # Test Health Status
 
-**Last updated:** 2026-05-01 (Phase 3b mobile pass shipped — 9 new tests at 375px viewport)
+**Last updated:** 2026-05-01 (Phase 3 fully shipped: a11y + Sentry + Lighthouse + mobile pass)
 
 ## Coverage by Feature
 
@@ -19,6 +19,7 @@
 | Studio v2 — text drafter (copy/email): generate happy path + reload, empty prompt validation, RLS cross-user, delete, memory-aware (`mock-text-with-context` model when facts exist) | 5 | 2026-04-30 | Anthropic-only; no Storage. content_text column on studio_outputs. Mock-mode inserts a deterministic `[mock copy …] [kind=…]` string. |
 | Studio v2 — voice-over: generate happy path + audio element renders + reload, 500-char cap rejected, RLS cross-user, delete (Storage row + DB row), memory-aware (`mock-audio-with-context` model when facts exist) | 5 | 2026-04-30 | ElevenLabs Flash v2.5 in real mode; mock mode uploads ~105-byte MP3 stub to Storage. 500-char hard cap on script enforced server-side and via disabled Generate button. |
 | Mobile pass — iPhone SE 375×667 viewport: 9 routes covered (dashboard, projects list, new project, project Coach/Memory/Studio tool grid + 3 panels). Each test asserts no horizontal scroll + primary interactive element visible. | 9 | 2026-05-01 | All green; no CSS fixes needed — existing Tailwind responsive patterns held. Layout-only checks; doesn't test cross-cutting flows on mobile (those are covered by the regular suite which still passes at default viewport). |
+| Accessibility (axe-core/playwright) — same 9 routes as mobile spec. Each test runs axe with WCAG 2A + 2AA rule sets and fails on `serious` or `critical` violations. | 9 | 2026-05-01 | Zero blocking violations. Moderate + minor issues not asserted. To audit those later, drop the impact filter in `expectNoSeriousA11yViolations`. |
 | Studio v2 — tool grid: landing renders 3 cards, no tool panel | (covered in studio.spec.ts) | 2026-04-30 | Studio tab now routes between tool grid (no `?studio=` param) and 3 per-tool panels (`?studio=image|text|voice`). Each card has `data-studio-tool-card`. |
 
 ## Untested by Design
@@ -57,6 +58,7 @@
 
 | Date | Branch | Outcome | Runtime | Where |
 |------|--------|---------|---------|-------|
+| 2026-05-01 | main | ✅ Phase 3 fully shipped: a11y + Sentry + Lighthouse | — | Three commits: a11y `b5c6cd6` (9 a11y tests, all green), Sentry `937fc57` (DSN-gated SDK integration), Lighthouse `060217a` (audit script + baseline scores). 82 total E2E tests. Lighthouse baseline: homepage 96 / login 79 / signup 94 (perf), all 100 on a11y/best/seo. |
 | 2026-05-01 | main | ✅ pass (72/73 parallel local; 1 known flake on studio.spec delete-image, retry-handled in CI) | 1.9 min local | Phase 3b mobile pass shipped — `tests/e2e/mobile.spec.ts` (9 tests). No CSS fixes needed; existing responsive Tailwind patterns held. Scheduled-routine cleanup (disabled). |
 | 2026-04-30 | main | ✅ pass (62/62 CI parallel; cap stress tests skipped) | 3.5 min CI / 1.9 min local | Phase 3a — per-worker storageState fixture (`tests/e2e/auth-fixture.ts`). 8 specs migrated, auto-on-push CI re-enabled. Cap tests `test.skip(!!process.env.CI, ...)` — too aggressive for CI parallel contention, kept locally for release verification. |
 | 2026-04-30 | main | ✅ pass (64/64 sequential) | 4.8 min | local (Phase 2 — Studio breadth: studio_outputs superset + copy drafter + voice-over + tool grid + 13 new/changed tests). Sequential mode only — parallel still hits the documented per-test-signup race; Phase 3 will fix. |
