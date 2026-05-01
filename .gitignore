@@ -53,6 +53,9 @@ next-env.d.ts
 # scratch / debugging output
 /tmp/
 
+# Lighthouse audit reports — keep folder, ignore generated content
+/lighthouse-reports/
+
 # per-worker auth state (created on first test run, regenerated as needed)
 /playwright/.auth/
 
