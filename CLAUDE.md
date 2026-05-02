@@ -291,6 +291,47 @@ Same four keys as above. Used by both workflows.
 
 > Add a new entry to the **top** of this list for each work session. Include: date, what shipped, decisions made, and anything left dangling.
 
+### 2026-05-02 (later again) — Phase 10: Document reader (PDF Q&A)
+
+After the 10-build research pass, the user picked the next autonomous build (skipping anything needing Halli's external accounts). Document reader was the biggest unmet capability — designers reading briefs, freelancers reading contracts, professionals reading specs all need to ask the coach about a PDF.
+
+**Shipped:**
+- Migration [supabase/migrations/20260502105911_add_project_documents.sql](supabase/migrations/20260502105911_add_project_documents.sql): new `project_documents` table (RLS owner-only, 10 MiB hard cap, page_count nullable). New private Storage bucket `project-documents` with the same `(storage.foldername(name))[1] = auth.uid()::text` path-prefix RLS pattern as `studio-images`.
+- Server actions [src/app/(app)/projects/[id]/documents/actions.ts](src/app/(app)/projects/[id]/documents/actions.ts): `uploadProjectDocument` (validates ownership + size + mime; rolls back the storage upload if the DB insert fails), `deleteProjectDocument` (storage object first, then DB row). 10-document-per-project cap to bound storage.
+- Q&A endpoint [src/app/api/projects/[id]/docs/ask/route.ts](src/app/api/projects/[id]/docs/ask/route.ts): receives `{ documentId, question }`, fetches the PDF from Storage via a 60-second signed URL, base64-encodes it, sends to Anthropic with the document as a `document` content block + `cache_control: { type: "ephemeral" }` for prompt caching. Repeated questions on the same doc within ~5 minutes hit Anthropic's cache. BYOK-aware. Mock mode emits `[mock-doc] About "<filename>" — I received: <question>` so tests assert on stable markers.
+- New "Docs" tab on the project page ([ProjectTabs.tsx](src/app/(app)/projects/[id]/ProjectTabs.tsx)) — fourth tab alongside Coach · Memory · Studio. Badge shows `N docs`.
+- UI: [DocumentsPanel.tsx](src/app/(app)/projects/[id]/documents/DocumentsPanel.tsx) — upload form on top, list of uploaded docs on the left (each with delete + open-original link), Q&A column on the right. Conversation history kept in client memory (per-doc) for the session; not persisted (the doc is the durable artifact).
+- 5 new E2E tests in [tests/e2e/documents.spec.ts](tests/e2e/documents.spec.ts): upload + Q&A happy path, delete + persist, RLS cross-user, non-PDF file rejected by server, ask endpoint rejects unauthenticated.
+
+**Total project E2E count after this:** ~150.
+
+**Decisions:**
+- **Anthropic-native PDF reading, not server-side parsing.** Claude takes PDFs directly via `document` blocks. No `pdf-parse` / `pdfjs-dist` dep, no chunking logic, no embedding. Trade: bigger per-question token cost (~3000 tokens/page) — mitigated by Anthropic's prompt cache, which dramatically cuts cost for repeat questions on the same doc.
+- **Separate table from `studio_outputs`.** Outputs are AI-generated; documents are user-uploaded inputs with different lifecycle (upload once, ask many times). Combining them would have made every existing Studio query care about a kind it doesn't render.
+- **Q&A history client-only.** Persisting per-document threads is a real feature but doubles the schema scope and the DB writes per question. The doc itself is durable; ephemeral Q&A is fine for v1. Will revisit if users ask.
+- **10-document cap per project.** Bounds storage cost without forcing a paywall. Easy to bump or replace with a Pro-tier limit when Stripe lands.
+- **Selection-derivation pattern instead of `useEffect`.** The newly-uploaded doc auto-selects because we *derive* the effective selection from `(explicitPick ?? documents[0])` rather than storing it as state. No effect-driven rerender, simpler state.
+
+**Hiccups + fixes:**
+- First test run: 4/5 passed. The "ask question" assertion timed out because `useState(documents[0]?.id ?? null)` only ran once at mount with empty docs, so the newly-uploaded doc didn't auto-select on revalidation. Switched to a derived `effectiveSelectedId` (explicit pick → first doc → null). 5/5 passed on retry.
+
+**Robustness checklist (Phase 10 gate):**
+- ✅ E2E coverage: upload, Q&A round-trip, delete, RLS cross-user, mime rejection, auth gate.
+- ✅ Storage RLS verified by spec (cross-user can't see uploaded doc on the project URL).
+- ✅ Mime + size validated server-side; client `accept="application/pdf"` is just UX hint.
+- ✅ BYOK respected (`getUserApiKey("anthropic")` consulted before falling back to platform key).
+- ✅ Type-check + production build clean.
+- ⏳ Real-mode PDF Q&A — Halli to upload a real PDF and verify. (Mock mode tests the wiring; real Anthropic call is unproven until tried.)
+- ⏳ Mobile + a11y sweep on the new Docs tab — deferred to a future sweep (low risk; layout follows the existing two-column patterns).
+
+**Next on the 10-build list (autonomous-buildable):**
+- #4 Coach × Email (paste-thread mode)
+- #5 Workflow chains
+- #7 Search / Cmd-K palette
+- #8 Opportunity radar v1
+- #9 Multilingual
+- #10 Lesson exercises with feedback
+
 ### 2026-05-02 (even later) — Skill tree completion + long-form drafter
 
 After Design v1 landed, kept building. Two content-shaped extensions on existing systems.

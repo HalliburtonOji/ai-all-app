@@ -1,12 +1,13 @@
 import Link from "next/link";
 
-export type ProjectTab = "coach" | "memory" | "studio";
+export type ProjectTab = "coach" | "memory" | "studio" | "docs";
 
 interface ProjectTabsProps {
   projectId: string;
   currentTab: ProjectTab;
   factCount: number;
   outputCount: number;
+  documentCount: number;
   currentConversationId: string | null;
 }
 
@@ -15,6 +16,7 @@ export function ProjectTabs({
   currentTab,
   factCount,
   outputCount,
+  documentCount,
   currentConversationId,
 }: ProjectTabsProps) {
   // Coach is the default; we drop ?tab=coach from the URL when navigating
@@ -37,6 +39,13 @@ export function ProjectTabs({
     studioParams.set("conversation", currentConversationId);
   }
   const studioUrl = `/projects/${projectId}?${studioParams.toString()}`;
+
+  const docsParams = new URLSearchParams();
+  docsParams.set("tab", "docs");
+  if (currentConversationId) {
+    docsParams.set("conversation", currentConversationId);
+  }
+  const docsUrl = `/projects/${projectId}?${docsParams.toString()}`;
 
   return (
     <nav
@@ -65,6 +74,16 @@ export function ProjectTabs({
         badge={
           outputCount > 0
             ? `${outputCount} ${outputCount === 1 ? "output" : "outputs"}`
+            : undefined
+        }
+      />
+      <TabLink
+        href={docsUrl}
+        active={currentTab === "docs"}
+        label="Docs"
+        badge={
+          documentCount > 0
+            ? `${documentCount} ${documentCount === 1 ? "doc" : "docs"}`
             : undefined
         }
       />

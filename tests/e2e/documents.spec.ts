@@ -1,0 +1,211 @@
+import { test, expect } from "./auth-fixture";
+import { createProject, signUpNewUser } from "./helpers";
+
+/**
+ * Phase 10 — project documents (PDF Q&A).
+ * Each test signs up a fresh user — documents are project-scoped.
+ */
+
+// A minimal valid PDF (header + cross-ref + EOF). ~600 bytes; small
+// enough to upload fast, big enough to satisfy Supabase Storage's
+// MIME sniff.
+const TINY_PDF_BYTES = Buffer.from([
+  0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34, 0x0a, 0x25, 0xe2, 0xe3,
+  0xcf, 0xd3, 0x0a, 0x31, 0x20, 0x30, 0x20, 0x6f, 0x62, 0x6a, 0x0a, 0x3c,
+  0x3c, 0x2f, 0x54, 0x79, 0x70, 0x65, 0x2f, 0x43, 0x61, 0x74, 0x61, 0x6c,
+  0x6f, 0x67, 0x2f, 0x50, 0x61, 0x67, 0x65, 0x73, 0x20, 0x32, 0x20, 0x30,
+  0x20, 0x52, 0x3e, 0x3e, 0x0a, 0x65, 0x6e, 0x64, 0x6f, 0x62, 0x6a, 0x0a,
+  0x32, 0x20, 0x30, 0x20, 0x6f, 0x62, 0x6a, 0x0a, 0x3c, 0x3c, 0x2f, 0x54,
+  0x79, 0x70, 0x65, 0x2f, 0x50, 0x61, 0x67, 0x65, 0x73, 0x2f, 0x4b, 0x69,
+  0x64, 0x73, 0x5b, 0x33, 0x20, 0x30, 0x20, 0x52, 0x5d, 0x2f, 0x43, 0x6f,
+  0x75, 0x6e, 0x74, 0x20, 0x31, 0x3e, 0x3e, 0x0a, 0x65, 0x6e, 0x64, 0x6f,
+  0x62, 0x6a, 0x0a, 0x33, 0x20, 0x30, 0x20, 0x6f, 0x62, 0x6a, 0x0a, 0x3c,
+  0x3c, 0x2f, 0x54, 0x79, 0x70, 0x65, 0x2f, 0x50, 0x61, 0x67, 0x65, 0x2f,
+  0x50, 0x61, 0x72, 0x65, 0x6e, 0x74, 0x20, 0x32, 0x20, 0x30, 0x20, 0x52,
+  0x2f, 0x4d, 0x65, 0x64, 0x69, 0x61, 0x42, 0x6f, 0x78, 0x5b, 0x30, 0x20,
+  0x30, 0x20, 0x36, 0x31, 0x32, 0x20, 0x37, 0x39, 0x32, 0x5d, 0x2f, 0x43,
+  0x6f, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x73, 0x20, 0x34, 0x20, 0x30, 0x20,
+  0x52, 0x3e, 0x3e, 0x0a, 0x65, 0x6e, 0x64, 0x6f, 0x62, 0x6a, 0x0a, 0x34,
+  0x20, 0x30, 0x20, 0x6f, 0x62, 0x6a, 0x0a, 0x3c, 0x3c, 0x2f, 0x4c, 0x65,
+  0x6e, 0x67, 0x74, 0x68, 0x20, 0x34, 0x34, 0x3e, 0x3e, 0x73, 0x74, 0x72,
+  0x65, 0x61, 0x6d, 0x0a, 0x42, 0x54, 0x20, 0x2f, 0x46, 0x31, 0x20, 0x32,
+  0x34, 0x20, 0x54, 0x66, 0x20, 0x31, 0x30, 0x30, 0x20, 0x37, 0x30, 0x30,
+  0x20, 0x54, 0x64, 0x20, 0x28, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x29, 0x20,
+  0x54, 0x6a, 0x20, 0x45, 0x54, 0x0a, 0x65, 0x6e, 0x64, 0x73, 0x74, 0x72,
+  0x65, 0x61, 0x6d, 0x0a, 0x65, 0x6e, 0x64, 0x6f, 0x62, 0x6a, 0x0a, 0x78,
+  0x72, 0x65, 0x66, 0x0a, 0x30, 0x20, 0x35, 0x0a, 0x30, 0x30, 0x30, 0x30,
+  0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x20, 0x36, 0x35, 0x35, 0x33, 0x35,
+  0x20, 0x66, 0x0a, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x31,
+  0x35, 0x20, 0x30, 0x30, 0x30, 0x30, 0x30, 0x20, 0x6e, 0x0a, 0x30, 0x30,
+  0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x36, 0x36, 0x20, 0x30, 0x30, 0x30,
+  0x30, 0x30, 0x20, 0x6e, 0x0a, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
+  0x31, 0x32, 0x32, 0x20, 0x30, 0x30, 0x30, 0x30, 0x30, 0x20, 0x6e, 0x0a,
+  0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x32, 0x31, 0x35, 0x20, 0x30,
+  0x30, 0x30, 0x30, 0x30, 0x20, 0x6e, 0x0a, 0x74, 0x72, 0x61, 0x69, 0x6c,
+  0x65, 0x72, 0x0a, 0x3c, 0x3c, 0x2f, 0x53, 0x69, 0x7a, 0x65, 0x20, 0x35,
+  0x2f, 0x52, 0x6f, 0x6f, 0x74, 0x20, 0x31, 0x20, 0x30, 0x20, 0x52, 0x3e,
+  0x3e, 0x0a, 0x73, 0x74, 0x61, 0x72, 0x74, 0x78, 0x72, 0x65, 0x66, 0x0a,
+  0x33, 0x33, 0x37, 0x0a, 0x25, 0x25, 0x45, 0x4f, 0x46, 0x0a,
+]);
+
+test.describe("Phase 10 — project documents", () => {
+  test("upload a PDF, see it in the list, ask + see the mock answer", async ({
+    page,
+  }) => {
+    const projectId = await createProject(page, {
+      name: "Doc upload happy path",
+      type: "client",
+    });
+
+    await page.goto(`/projects/${projectId}?tab=docs`);
+    await expect(page.locator('[data-docs-panel="true"]')).toBeVisible();
+    await expect(page.locator('[data-docs-empty="true"]')).toBeVisible();
+
+    // Upload the tiny PDF via the file input.
+    await page
+      .locator('[data-doc-upload-input="true"]')
+      .setInputFiles({
+        name: "test-contract.pdf",
+        mimeType: "application/pdf",
+        buffer: TINY_PDF_BYTES,
+      });
+    await page.locator('[data-doc-upload-button="true"]').click();
+
+    // Doc appears in the list.
+    const row = page.locator("[data-doc-id]").first();
+    await expect(row).toBeVisible({ timeout: 15_000 });
+    await expect(row).toContainText("test-contract.pdf");
+
+    // Q&A panel is selected on the new doc; ask a question.
+    await page
+      .locator('[data-docs-question-input="true"]')
+      .fill("What does this contract say?");
+    await page.locator('[data-docs-ask-button="true"]').click();
+
+    // Mock-mode reply confirms the wiring + filename injection.
+    const messages = page.locator('[data-docs-message-role="assistant"]');
+    await expect(messages).toHaveCount(1, { timeout: 10_000 });
+    await expect(messages.first()).toContainText("[mock-doc]");
+    await expect(messages.first()).toContainText("test-contract.pdf");
+  });
+
+  test("delete a document — row gone, persists across reload", async ({
+    page,
+  }) => {
+    const projectId = await createProject(page, {
+      name: "Doc delete test",
+      type: "client",
+    });
+
+    await page.goto(`/projects/${projectId}?tab=docs`);
+    await page
+      .locator('[data-doc-upload-input="true"]')
+      .setInputFiles({
+        name: "doomed.pdf",
+        mimeType: "application/pdf",
+        buffer: TINY_PDF_BYTES,
+      });
+    await page.locator('[data-doc-upload-button="true"]').click();
+
+    const row = page.locator("[data-doc-id]").first();
+    await expect(row).toBeVisible({ timeout: 15_000 });
+
+    await row.locator('[data-doc-delete="true"]').click();
+    await row.locator('[data-doc-confirm-delete="true"]').click();
+
+    await expect(page.locator("[data-doc-id]")).toHaveCount(0, {
+      timeout: 10_000,
+    });
+
+    await page.reload();
+    await expect(page.locator("[data-doc-id]")).toHaveCount(0);
+  });
+
+  test("RLS: user B cannot see user A's documents on the same fake URL", async ({
+    browser,
+  }) => {
+    const ctxA = await browser.newContext();
+    const pageA = await ctxA.newPage();
+    await signUpNewUser(pageA);
+    const projectIdA = await createProject(pageA, {
+      name: "User A doc project",
+      type: "client",
+    });
+    await pageA.goto(`/projects/${projectIdA}?tab=docs`);
+    await pageA
+      .locator('[data-doc-upload-input="true"]')
+      .setInputFiles({
+        name: "secret.pdf",
+        mimeType: "application/pdf",
+        buffer: TINY_PDF_BYTES,
+      });
+    await pageA.locator('[data-doc-upload-button="true"]').click();
+    await expect(
+      pageA.locator("[data-doc-id]").first(),
+    ).toBeVisible({ timeout: 15_000 });
+    await ctxA.close();
+
+    // User B can't access /projects/{A's project} at all (404 on the
+    // detail page). Their own project's Docs tab is empty.
+    const ctxB = await browser.newContext();
+    const pageB = await ctxB.newPage();
+    await signUpNewUser(pageB);
+    const responseB = await pageB.goto(
+      `/projects/${projectIdA}?tab=docs`,
+    );
+    expect(responseB?.status()).toBe(404);
+
+    const projectIdB = await createProject(pageB, {
+      name: "User B doc project",
+      type: "client",
+    });
+    await pageB.goto(`/projects/${projectIdB}?tab=docs`);
+    await expect(pageB.locator('[data-docs-empty="true"]')).toBeVisible();
+    await expect(pageB.locator("[data-doc-id]")).toHaveCount(0);
+
+    await ctxB.close();
+  });
+
+  test("non-PDF file upload is rejected by the server action", async ({
+    page,
+  }) => {
+    const projectId = await createProject(page, {
+      name: "Doc reject non-pdf",
+      type: "client",
+    });
+    await page.goto(`/projects/${projectId}?tab=docs`);
+
+    // Bypass the input's accept="application/pdf" filter via the
+    // setInputFiles bytes — the server still validates mime.
+    await page.locator('[data-doc-upload-input="true"]').setInputFiles({
+      name: "not-a-pdf.png",
+      mimeType: "image/png",
+      buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47]),
+    });
+    await page.locator('[data-doc-upload-button="true"]').click();
+
+    await expect(
+      page.locator('[data-doc-upload-error="true"]'),
+    ).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator("[data-doc-id]")).toHaveCount(0);
+  });
+
+  test("/api/projects/.../docs/ask rejects unauthenticated callers", async ({
+    playwright,
+  }) => {
+    const ctx = await playwright.request.newContext({
+      storageState: { cookies: [], origins: [] },
+    });
+    const response = await ctx.post(
+      "/api/projects/00000000-0000-0000-0000-000000000000/docs/ask",
+      {
+        data: {
+          documentId: "00000000-0000-0000-0000-000000000000",
+          question: "anything",
+        },
+      },
+    );
+    expect(response.status()).toBe(401);
+    await ctx.dispose();
+  });
+});

@@ -15,8 +15,10 @@ import {
 import { ProjectTabs, type ProjectTab } from "./ProjectTabs";
 import { Memory } from "./Memory";
 import { Studio } from "./Studio";
+import { DocumentsPanel } from "./documents/DocumentsPanel";
 import { RecentActivityStrip } from "@/components/RecentActivityStrip";
 import type { StudioOutput } from "@/types/studio";
+import type { ProjectDocument } from "@/types/documents";
 
 export default async function ProjectDetailPage({
   params,
@@ -161,7 +163,9 @@ export default async function ProjectDetailPage({
       ? "memory"
       : requestedTab === "studio"
         ? "studio"
-        : "coach";
+        : requestedTab === "docs"
+          ? "docs"
+          : "coach";
 
   // Load all Studio outputs for this project (used for tab badge,
   // recent-activity strip, and the per-tool galleries). Hydrate signed
@@ -183,6 +187,27 @@ export default async function ProjectDetailPage({
         }
         const { data: signed } = await supabase.storage
           .from("studio-images")
+          .createSignedUrl(row.storage_path, 60 * 60);
+        return { ...row, signed_url: signed?.signedUrl ?? null };
+      },
+    ),
+  );
+
+  // Load uploaded documents (used for tab badge + the Docs panel).
+  // Hydrate signed URLs for the "Open original" link.
+  const { data: docRows } = await supabase
+    .from("project_documents")
+    .select(
+      "id, user_id, project_id, filename, storage_path, size_bytes, page_count, created_at",
+    )
+    .eq("project_id", project.id)
+    .order("created_at", { ascending: false });
+
+  const projectDocuments: ProjectDocument[] = await Promise.all(
+    ((docRows ?? []) as Array<Omit<ProjectDocument, "signed_url">>).map(
+      async (row) => {
+        const { data: signed } = await supabase.storage
+          .from("project-documents")
           .createSignedUrl(row.storage_path, 60 * 60);
         return { ...row, signed_url: signed?.signedUrl ?? null };
       },
@@ -292,6 +317,7 @@ export default async function ProjectDetailPage({
           currentTab={currentTab}
           factCount={facts.length}
           outputCount={studioOutputs.length}
+          documentCount={projectDocuments.length}
           currentConversationId={currentConversationId}
         />
 
@@ -326,6 +352,11 @@ export default async function ProjectDetailPage({
               facts={facts}
               hasExtractedYet={hasExtractedYet}
               isAdmin={isAdmin}
+            />
+          ) : currentTab === "docs" ? (
+            <DocumentsPanel
+              projectId={project.id}
+              documents={projectDocuments}
             />
           ) : (
             <Studio
