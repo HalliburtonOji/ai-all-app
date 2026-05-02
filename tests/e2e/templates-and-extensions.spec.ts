@@ -93,27 +93,74 @@ test.describe("Studio text drafter — code kind", () => {
   });
 });
 
-test.describe("Tool Fluency lesson branch", () => {
-  test("third branch shows on /learn with at least one lesson", async ({
-    page,
-  }) => {
+test.describe("Lesson branches — full skill tree (5 branches)", () => {
+  test("all five branches render on /learn", async ({ page }) => {
     await page.goto("/learn");
-    await expect(
-      page.locator('[data-learn-branch="tool-fluency"]'),
-    ).toBeVisible();
-    const cards = page.locator(
-      '[data-learn-branch-list="tool-fluency"] [data-lesson-slug]',
-    );
-    expect(await cards.count()).toBeGreaterThanOrEqual(3);
+    for (const branch of [
+      "foundations",
+      "prompt-craft",
+      "tool-fluency",
+      "application",
+      "career-and-money",
+    ]) {
+      await expect(
+        page.locator(`[data-learn-branch="${branch}"]`),
+      ).toBeVisible();
+    }
   });
 
-  test("opening a Tool Fluency lesson renders the body", async ({ page }) => {
-    await page.goto("/learn/tool-fluency-01-not-every-tool");
+  test("opening an Application lesson renders the body", async ({ page }) => {
+    await page.goto("/learn/application-01-real-work-not-demos");
     await expect(
-      page.getByRole("heading", { name: /You don't need every tool/ }),
+      page.getByRole("heading", { name: /Real work, not demos/ }),
     ).toBeVisible();
     await expect(
       page.locator('[data-lesson-body="true"]'),
     ).toBeVisible();
+  });
+
+  test("opening a Career & Money lesson renders the body", async ({ page }) => {
+    await page.goto("/learn/career-and-money-01-pricing-without-grift");
+    await expect(
+      page.getByRole("heading", { name: /Pricing AI work without the grift/ }),
+    ).toBeVisible();
+    await expect(
+      page.locator('[data-lesson-body="true"]'),
+    ).toBeVisible();
+  });
+});
+
+test.describe("Studio text drafter — long-form kind", () => {
+  test("long_form kind is selectable and generates a draft", async ({
+    browser,
+  }) => {
+    const ctx = await browser.newContext();
+    const page = await ctx.newPage();
+    await signUpNewUser(page);
+
+    await page.goto("/projects/new");
+    await page.locator('input[name="name"]').fill("Long-form test");
+    await page
+      .locator('select[name="project_type"]')
+      .selectOption("channel");
+    await page.getByRole("button", { name: "Create project" }).click();
+    await page.waitForURL(/\/projects\/[a-f0-9-]+$/, { timeout: 10_000 });
+    const projectUrl = page.url();
+
+    await page.goto(`${projectUrl}?tab=studio&studio=text`);
+    await page
+      .getByLabel("Text draft prompt")
+      .fill("A blog post on the value of failure forums.");
+    await page.getByLabel("Draft type").selectOption("long_form");
+    await page.locator('[data-studio-generate-button="text"]').click();
+
+    const tile = page
+      .locator('[data-studio-output-kind="text"]')
+      .first();
+    await expect(tile).toBeVisible({ timeout: 15_000 });
+    // Mock-mode marker confirms kind=long_form was passed through.
+    await expect(tile).toContainText("kind=long_form");
+
+    await ctx.close();
   });
 });

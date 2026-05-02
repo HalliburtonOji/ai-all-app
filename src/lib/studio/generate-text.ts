@@ -4,14 +4,21 @@ import { randomUUID } from "crypto";
 
 const MODEL = "claude-sonnet-4-6";
 const MAX_PROMPT_LENGTH = 2000;
-const MAX_OUTPUT_LENGTH = 1500;
-const MAX_TOKENS = 800;
+const MAX_OUTPUT_LENGTH = 6000;
+// Per-kind token cap so a "tweet" doesn't wander into 1500 tokens
+// just because the cap allows it. Defaults to 800 for everything
+// except long_form, which needs the headroom.
+const TOKEN_CAP_BY_KIND: Record<string, number> = {
+  long_form: 2000,
+};
+const DEFAULT_MAX_TOKENS = 800;
 
 export type TextDraftKind =
   | "email"
   | "social_post"
   | "caption"
   | "code"
+  | "long_form"
   | "general";
 
 const KIND_INSTRUCTIONS: Record<TextDraftKind, string> = {
@@ -23,6 +30,8 @@ const KIND_INSTRUCTIONS: Record<TextDraftKind, string> = {
     "Write a caption (image, video, podcast). One to three sentences max. Curious, specific, low-key.",
   code:
     "Write code that solves the user's request. Output ONLY a single fenced code block (use the language name on the opening fence, e.g. ```python). No prose explanation, no introduction, no closing notes — just the code. Keep it minimal and idiomatic for the named language. Include a brief 1-line comment at the top of the file when it helps readability.",
+  long_form:
+    "Write a long-form piece — blog post, article, essay, or in-depth section. Structure with markdown: an opening hook, 3-5 H2 sections, a sharp closing. Aim for 600-1200 words by default, longer only if the user explicitly asks. Open with substance, not 'In today's fast-paced world…' platitudes. Use specifics and named examples where relevant. No corporate filler phrases. Target a 30-second read for the opening to hook, then earn the rest. Sound like a sharp colleague writing for their newsletter, not a content mill.",
   general:
     "Write the requested copy. Keep it tight and concrete. Match the user's tone if discernible.",
 };
@@ -97,7 +106,7 @@ export async function generateTextDraftForProject(
 
       const resp = await client.messages.create({
         model: MODEL,
-        max_tokens: MAX_TOKENS,
+        max_tokens: TOKEN_CAP_BY_KIND[kindHint] ?? DEFAULT_MAX_TOKENS,
         system: systemPrompt,
         messages: [{ role: "user", content: trimmed }],
       });

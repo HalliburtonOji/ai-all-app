@@ -22,6 +22,7 @@ const VALID_TEXT_KINDS: ReadonlySet<TextDraftKind> = new Set([
   "social_post",
   "caption",
   "code",
+  "long_form",
   "general",
 ]);
 

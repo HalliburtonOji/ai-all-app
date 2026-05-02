@@ -1,12 +1,16 @@
 export type LearnBranch =
   | "foundations"
   | "prompt-craft"
-  | "tool-fluency";
+  | "tool-fluency"
+  | "application"
+  | "career-and-money";
 
 export const BRANCH_LABELS: Record<LearnBranch, string> = {
   foundations: "Foundations",
   "prompt-craft": "Prompt Craft",
   "tool-fluency": "Tool Fluency",
+  application: "Application",
+  "career-and-money": "Career & Money",
 };
 
 export const BRANCH_DESCRIPTIONS: Record<LearnBranch, string> = {
@@ -16,12 +20,18 @@ export const BRANCH_DESCRIPTIONS: Record<LearnBranch, string> = {
     "The shape of asks that get useful answers, and the moves that fix bad ones.",
   "tool-fluency":
     "Picking the right tool for the job and using it well — without buying every shiny new thing.",
+  application:
+    "Doing real work with AI — not theoretically, in your actual life.",
+  "career-and-money":
+    "Earning from AI work without grift, hype, or selling courses to other course-sellers.",
 };
 
 export const BRANCH_ORDER: LearnBranch[] = [
   "foundations",
   "prompt-craft",
   "tool-fluency",
+  "application",
+  "career-and-money",
 ];
 
 export interface LessonMeta {

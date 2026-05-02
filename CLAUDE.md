@@ -291,6 +291,38 @@ Same four keys as above. Used by both workflows.
 
 > Add a new entry to the **top** of this list for each work session. Include: date, what shipped, decisions made, and anything left dangling.
 
+### 2026-05-02 (even later) — Skill tree completion + long-form drafter
+
+After Design v1 landed, kept building. Two content-shaped extensions on existing systems.
+
+**Skill tree at full size — 5 branches, 20 lessons:**
+- [src/types/learn.ts](src/types/learn.ts): added `application` and `career-and-money` to the `LearnBranch` union with labels/descriptions. The 5-branch target from the original 12-week master plan §16 is now hit.
+- 8 new lessons in [content/lessons/](content/lessons/):
+  - **Application** branch (working with AI on real tasks): real-work-not-demos, the-edit-pass, shipping-with-ai-honestly, when-it-goes-wrong
+  - **Career & Money** branch (earning without the grift): pricing-without-grift, the-portfolio-shift, finding-real-buyers, the-long-game
+- All lessons match the wholesome charter — no "10x your career" energy, anti-hype, anti-doom, with concrete try-it exercises that point users back into the app's real surfaces (`/me/earnings`, `/me/clients`, `/community/failures`, the coach inside Projects).
+- 20 total lessons across 5 branches now: Foundations (6) · Prompt Craft (6) · Tool Fluency (4) · Application (4) · Career & Money (4).
+
+**Long-form text drafter:**
+- [src/lib/studio/generate-text.ts](src/lib/studio/generate-text.ts): added `long_form` to the `TextDraftKind` union for blog-post / article-length output. System prompt outputs structured markdown (opening hook → 3-5 H2 sections → sharp closing), 600–1200 words by default. The wholesome charter is in the prompt: no corporate filler, no "in today's fast-paced world" platitudes.
+- Per-kind token cap added — `TOKEN_CAP_BY_KIND.long_form = 2000` (default 800 for short kinds). Bumped `MAX_OUTPUT_LENGTH` from 1500 to 6000 chars to allow long-form storage.
+- [studio-actions.ts](src/app/(app)/projects/[id]/studio-actions.ts): `VALID_TEXT_KINDS` now includes `long_form`.
+- [StudioTextPanel.tsx](src/app/(app)/projects/[id]/StudioTextPanel.tsx): "Long-form (blog/article)" added to the kind dropdown.
+
+**Tests:** 4 new in [tests/e2e/templates-and-extensions.spec.ts](tests/e2e/templates-and-extensions.spec.ts) — 5 branches render, opening an Application lesson works, opening a Career & Money lesson works, long_form kind generates a draft. All 7 specs in that file pass sequentially in 27s.
+
+**Decisions:**
+- **Lesson content stays grounded.** Each lesson points users back into the app's real surfaces (`/me/earnings` to track buyer sources, `/me/clients` to know who paid, `/community/failures` to share what didn't work). Content isn't theory; it's pre-baked usage of the product.
+- **Per-kind token cap, not a global bump.** A "tweet" kind doesn't need 2000 tokens of headroom. The map keeps short kinds short and long kind long.
+- **No new schema.** Long-form is a kind value on the existing text drafter. Same panel, same gallery, same RLS.
+- **5 branches × 4 lessons = 20 total.** Master plan said "~6 + ~6"; we hit 6+6+4+4+4. Shipped in two passes (v1 was 12 lessons across 2 branches, this fills out the rest).
+
+**Where the master plan stands:**
+- Phases 1–9 ✅ shipped
+- Design / UX v1 ✅ shipped
+- Skill tree at full master-plan target ✅
+- Original 12-week MVP feature-complete except: Stripe (needs Halli's Stripe), workflow recorder, marketplace, opportunity radar, multilingual, mobile-money rails — all queued for v2 / on-demand.
+
 ### 2026-05-02 (later still) — Design / UX v1: brand system + per-layer accents + polish
 
 After Phase 9 + the small extensions landed, Halli pushed back on the visual side: "we've not done much designing and UI". Right call — the app was functionally complete through 9 phases but visually flat (zinc/black/white Tailwind defaults everywhere, no brand identity, no per-layer differentiation, mobile was "doesn't break" rather than "feels right"). This phase is the first real design pass.
