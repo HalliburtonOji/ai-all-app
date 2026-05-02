@@ -51,9 +51,16 @@ export default async function EarningsPage() {
     <main className="mx-auto w-full max-w-4xl px-4 py-10 sm:px-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-            Earnings
-          </p>
+          <div className="flex items-center gap-2">
+            <span
+              aria-hidden
+              className="inline-block h-2 w-2 rounded-full"
+              style={{ background: "var(--earn-accent)" }}
+            />
+            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+              Earnings
+            </p>
+          </div>
           <h1 className="mt-1 text-3xl font-bold tracking-tight text-black sm:text-4xl dark:text-white">
             What you&apos;ve made
           </h1>

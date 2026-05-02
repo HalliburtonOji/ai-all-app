@@ -9,11 +9,24 @@ export default async function SignupPage({
   const { error } = await searchParams;
 
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-center bg-zinc-50 px-6 dark:bg-black">
+    <main className="bg-canvas relative flex min-h-screen flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm">
-        <h1 className="mb-8 text-center text-3xl font-bold tracking-tight text-black dark:text-white">
-          Create your account
+        <Link
+          href="/"
+          className="mb-8 flex items-center justify-center gap-2 text-sm font-medium text-[var(--brand-strong)]"
+        >
+          <span
+            aria-hidden
+            className="inline-block h-2 w-2 rounded-full bg-[var(--brand)]"
+          />
+          AI All App
+        </Link>
+        <h1 className="mb-2 text-center text-3xl font-bold tracking-tight text-black dark:text-white">
+          Start free
         </h1>
+        <p className="mb-8 text-center text-sm text-zinc-600 dark:text-zinc-400">
+          90 seconds. No credit card. Bring your own keys whenever.
+        </p>
 
         {error && (
           <p className="mb-4 rounded-md border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400">
@@ -27,7 +40,7 @@ export default async function SignupPage({
             type="email"
             required
             placeholder="Email"
-            className="w-full rounded-md border border-zinc-300 bg-white px-4 py-2 text-black placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-black dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:focus:ring-white"
+            className="w-full rounded-md border border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2 text-[var(--foreground)] placeholder:text-zinc-400 focus:border-[var(--brand)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-soft)]"
           />
           <input
             name="password"
@@ -35,11 +48,11 @@ export default async function SignupPage({
             required
             minLength={6}
             placeholder="Password (min 6 characters)"
-            className="w-full rounded-md border border-zinc-300 bg-white px-4 py-2 text-black placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-black dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:focus:ring-white"
+            className="w-full rounded-md border border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2 text-[var(--foreground)] placeholder:text-zinc-400 focus:border-[var(--brand)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-soft)]"
           />
           <button
             type="submit"
-            className="w-full rounded-md bg-black py-2 font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+            className="w-full rounded-md bg-[var(--brand)] py-2 font-medium text-white shadow-sm transition-colors hover:bg-[var(--brand-strong)]"
           >
             Sign up
           </button>

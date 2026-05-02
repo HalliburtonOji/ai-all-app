@@ -31,9 +31,16 @@ export default async function LearnIndexPage() {
 
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-10 sm:px-6">
-      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-        Learn
-      </p>
+      <div className="flex items-center gap-2">
+        <span
+          aria-hidden
+          className="inline-block h-2 w-2 rounded-full"
+          style={{ background: "var(--learn-accent)" }}
+        />
+        <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+          Learn
+        </p>
+      </div>
       <div className="mt-1 flex flex-wrap items-baseline justify-between gap-3">
         <h1 className="text-3xl font-bold tracking-tight text-black sm:text-4xl dark:text-white">
           Get genuinely good at AI

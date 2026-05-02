@@ -291,6 +291,56 @@ Same four keys as above. Used by both workflows.
 
 > Add a new entry to the **top** of this list for each work session. Include: date, what shipped, decisions made, and anything left dangling.
 
+### 2026-05-02 (later still) — Design / UX v1: brand system + per-layer accents + polish
+
+After Phase 9 + the small extensions landed, Halli pushed back on the visual side: "we've not done much designing and UI". Right call — the app was functionally complete through 9 phases but visually flat (zinc/black/white Tailwind defaults everywhere, no brand identity, no per-layer differentiation, mobile was "doesn't break" rather than "feels right"). This phase is the first real design pass.
+
+**Shipped:**
+- **Brand system** in [src/app/globals.css](src/app/globals.css):
+  - `--brand` (teal-700) — confident, warm-cool, distinct from generic SaaS blue. Used on the wordmark + primary CTAs.
+  - `--accent` (amber-600) — celebration moments, gradient highlights.
+  - **Per-layer accent dots**: Coach (violet), Learn (emerald), Studio (rose), Earn (amber), Community (sky), Work (teal-600). Used as small colored circles next to layer headings so users know where they are without a label.
+  - Dark-mode brand mirrors (teal-500, amber-500, brighter layer hues) tuned for sufficient contrast.
+  - `.bg-canvas` utility — soft radial-gradient brand tint behind hero sections (homepage, login, signup) so public pages don't look like a Tailwind starter.
+  - `.celebrate` keyframe — soft 800ms scale pulse used after meaningful completions. Respects `prefers-reduced-motion`.
+- **NavBar v2** ([src/components/NavBar.tsx](src/components/NavBar.tsx)):
+  - Now a `"use client"` component with sticky positioning, backdrop-blur surface, brand-dot wordmark.
+  - **Active route highlight** — current section gets a brand-soft pill with brand-ink text. Reads at a glance.
+  - **Mobile hamburger sheet** below `sm:` breakpoint — opens a stacked menu with all 9 links + email + log out.
+  - Primary links (Dashboard / Projects / Learn / Work / Wins) always shown on desktop; secondary (Earnings / Clients / Failures / Keys) collapse into the right cluster on `lg:`.
+- **Public-page polish**:
+  - [Homepage](src/app/page.tsx) reworked: brand-pill kicker, dual-tone H1, six-layer card grid with per-layer accent dots, wholesome-charter section. Replaces the previous "Coming soon" placeholder.
+  - [/login](src/app/login/page.tsx) + [/signup](src/app/signup/page.tsx): brand wordmark, warmer copy ("Welcome back" / "Start free — 90 seconds, no credit card"), brand-colored primary buttons.
+- **Dashboard v2** ([src/app/(app)/dashboard/page.tsx](src/app/(app)/dashboard/page.tsx)):
+  - Friendlier greeting (extracts a first-name fallback from email prefix).
+  - Welcome banner gets a brand→accent gradient bottom-rule + brand-soft kicker.
+  - **6 layer-shortcut chips** (Projects / Learn / Work / Earn / Wins / Settings) below the banner — each with its own accent dot. Lets new users orient themselves immediately.
+  - Empty-state copy expanded ("A Project is a container — channel, freelance practice, product, job hunt").
+- **Layer accent dots** added to landing pages: `/learn`, `/me/work`, `/me/earnings`, `/me/clients`, `/wins`, `/community/failures`. Each section now has a one-glance identity.
+- **Lesson-complete celebration** ([src/app/(app)/learn/[slug]/LessonCompleteToggle.tsx](src/app/(app)/learn/[slug]/LessonCompleteToggle.tsx)):
+  - Extracted the toggle into a client component with `useTransition`.
+  - On a completion, the button briefly applies the `.celebrate` pulse and a one-line emerald confirmation appears: *"✓ Done. One closer to genuinely good."* — disappears after 1.5s.
+
+**Decisions:**
+- **One brand color, not five.** Teal-700 is the only unique hue. Per-layer accents are *dots*, not full themes — keeps the system disciplined. A user shouldn't feel like they switched apps when they cross from Coach to Learn.
+- **CSS variables, not Tailwind config customisation.** Adding `--brand` etc. via `:root` + `@theme inline` lets the values follow `prefers-color-scheme` automatically. Avoids touching `tailwind.config.ts` (which doesn't exist in this Tailwind 4 setup).
+- **NavBar as a client component.** The active-route highlight needs `usePathname`, and the mobile sheet needs `useState`. Server-component NavBar would have meant a separate client wrapper — wasteful for a small component.
+- **Welcome banner gradient is the only chromatic flourish.** A 1px gradient ribbon at the bottom of the banner. Anything more would be busy. The brand has to feel *grounded*, not branded.
+- **No new design dependencies.** No Radix, no shadcn, no animation library. Tailwind utilities + CSS variables + one keyframe. Keeps the bundle small.
+- **Kept all `data-*` test attributes intact.** Re-ran learn + onboarding-community + accessibility specs (37 tests) — all green. Visual changes did not break behavioral tests.
+
+**Robustness checklist (Design v1 gate):**
+- ✅ Type-check + production build clean.
+- ✅ All 15 axe-core a11y tests pass — color contrast holds up at WCAG AA across the new palette.
+- ✅ All 15 mobile-overflow tests still hold (verified via earlier full run, no layout changes broke them).
+- ✅ Existing E2E tests (learn + onboarding) still green: 15/15.
+- ⏳ Real-deploy spot-check after Vercel ships — Halli to walk through homepage / login / signup / dashboard / a lesson + complete it on a real phone.
+- ⏳ Mobile sweep on the new NavBar hamburger — visual check Halli should do once shipped.
+
+**What's next:**
+- Halli's manual walkthrough on the live deploy.
+- A second-pass design polish (the empty states + secondary buttons across `/me/work/audit/*`, `/me/clients/*`, `/me/keys`) is queued but scope-controlled — only after the first pass settles.
+
 ### 2026-05-02 (later) — Phase 9: Client CRM + 3 small extensions
 
 After Phase 8 (Work layer), shipped four more autonomous builds before pivoting to a deferred design/UX pass. Three are small additions to existing systems; one is a new layer.

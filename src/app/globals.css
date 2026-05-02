@@ -1,14 +1,60 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+/*
+ * AI All App — design system v1
+ * Brand: teal-700 (anchored, not generic SaaS blue). Used for the
+ * wordmark and primary CTAs.
+ * Accent: amber-600 — celebration moments, success highlights.
+ * Per-layer accents — used sparingly as icon tints, top ribbons,
+ * and chips. Each layer gets one hue so the user knows where they
+ * are without a label.
+ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fafaf9;
+  --foreground: #0c0a09;
+  --surface: #ffffff;
+  --surface-muted: #f5f5f4;
+  --border-soft: #e7e5e4;
+  --border-strong: #a8a29e;
+
+  /* Brand */
+  --brand: #0f766e;          /* teal-700 */
+  --brand-strong: #115e59;   /* teal-800 */
+  --brand-soft: #ccfbf1;     /* teal-100 */
+  --brand-ink: #042f2e;      /* teal-950 */
+
+  /* Accent */
+  --accent: #d97706;         /* amber-600 */
+  --accent-soft: #fef3c7;    /* amber-100 */
+
+  /* Per-layer accents */
+  --coach-accent: #7c3aed;     /* violet-600 */
+  --learn-accent: #059669;     /* emerald-600 */
+  --studio-accent: #e11d48;    /* rose-600 */
+  --earn-accent: #d97706;      /* amber-600 (matches global accent) */
+  --community-accent: #0284c7; /* sky-600 */
+  --work-accent: #0d9488;      /* teal-600 (sister to brand) */
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-ink: var(--brand-ink);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-coach-accent: var(--coach-accent);
+  --color-learn-accent: var(--learn-accent);
+  --color-studio-accent: var(--studio-accent);
+  --color-earn-accent: var(--earn-accent);
+  --color-community-accent: var(--community-accent);
+  --color-work-accent: var(--work-accent);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -16,12 +62,67 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
-    --foreground: #ededed;
+    --foreground: #fafaf9;
+    --surface: #18181b;
+    --surface-muted: #27272a;
+    --border-soft: #27272a;
+    --border-strong: #52525b;
+
+    --brand: #14b8a6;          /* teal-500 — brighter for dark */
+    --brand-strong: #2dd4bf;   /* teal-400 */
+    --brand-soft: #134e4a;     /* teal-900 */
+    --brand-ink: #ccfbf1;      /* teal-100 */
+
+    --accent: #f59e0b;         /* amber-500 */
+    --accent-soft: #78350f;    /* amber-900 */
+
+    --coach-accent: #a78bfa;     /* violet-400 */
+    --learn-accent: #34d399;     /* emerald-400 */
+    --studio-accent: #fb7185;    /* rose-400 */
+    --earn-accent: #fbbf24;      /* amber-400 */
+    --community-accent: #38bdf8; /* sky-400 */
+    --work-accent: #2dd4bf;      /* teal-400 */
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, sans-serif;
+  font-feature-settings: "ss01", "cv11";
+}
+
+/* Subtle background texture on the public pages so they don't feel
+   like a Tailwind starter. */
+.bg-canvas {
+  background-image:
+    radial-gradient(
+      circle at 20% 0%,
+      color-mix(in srgb, var(--brand) 8%, transparent) 0%,
+      transparent 40%
+    ),
+    radial-gradient(
+      circle at 80% 100%,
+      color-mix(in srgb, var(--accent) 6%, transparent) 0%,
+      transparent 50%
+    );
+}
+
+/* One small celebration animation we use after meaningful completions
+   (lesson finished, audit generated). Not garish — just a soft pulse. */
+@keyframes celebrate-pulse {
+  0%   { transform: scale(1);    opacity: 1; }
+  40%  { transform: scale(1.04); opacity: 1; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+.celebrate {
+  animation: celebrate-pulse 800ms ease-out;
+}
+
+/* Reduce motion for users who ask for it. */
+@media (prefers-reduced-motion: reduce) {
+  .celebrate {
+    animation: none;
+  }
 }

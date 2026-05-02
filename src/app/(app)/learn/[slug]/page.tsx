@@ -7,8 +7,8 @@ import {
   getLessonBySlug,
 } from "@/lib/learn/lessons";
 import { BRANCH_LABELS, type LessonProgressStatus } from "@/types/learn";
-import { setLessonComplete } from "../actions";
 import { LessonTutor } from "../LessonTutor";
+import { LessonCompleteToggle } from "./LessonCompleteToggle";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -94,25 +94,10 @@ export default async function LessonPage({ params }: PageProps) {
             <h2 className="text-sm font-semibold text-black dark:text-white">
               {isComplete ? "You finished this one." : "On your plate"}
             </h2>
-            <form action={setLessonComplete} className="mt-3">
-              <input type="hidden" name="slug" value={lesson.slug} />
-              <input
-                type="hidden"
-                name="completed"
-                value={isComplete ? "false" : "true"}
-              />
-              <button
-                type="submit"
-                data-lesson-toggle-complete="true"
-                className={
-                  isComplete
-                    ? "w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-black transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800"
-                    : "w-full rounded-md bg-emerald-700 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-800 dark:bg-emerald-700 dark:hover:bg-emerald-600"
-                }
-              >
-                {isComplete ? "Mark as not done" : "Mark as complete"}
-              </button>
-            </form>
+            <LessonCompleteToggle
+              slug={lesson.slug}
+              isComplete={isComplete}
+            />
             {next && (
               <Link
                 href={`/learn/${next.slug}`}

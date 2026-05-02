@@ -20,9 +20,16 @@ export default async function WorkLandingPage() {
 
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-10 sm:px-6">
-      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-        Work
-      </p>
+      <div className="flex items-center gap-2">
+        <span
+          aria-hidden
+          className="inline-block h-2 w-2 rounded-full"
+          style={{ background: "var(--work-accent)" }}
+        />
+        <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+          Work
+        </p>
+      </div>
       <h1 className="mt-1 text-3xl font-bold tracking-tight text-black sm:text-4xl dark:text-white">
         AI and your job
       </h1>
