@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { logout } from "@/app/auth/actions";
+import { SearchPaletteTrigger } from "@/components/SearchPalette";
 
 interface NavItem {
   href: string;
@@ -77,6 +78,8 @@ export function NavBar({ email }: { email: string }) {
               <NavLink key={l.href} item={l} active={isActive(pathname, l)} />
             ))}
           </ul>
+
+          <SearchPaletteTrigger />
 
           <span
             className="hidden max-w-[160px] truncate text-xs text-zinc-500 md:inline"
