@@ -208,7 +208,11 @@ Workflow recorder, template gallery, marketplace, opportunity radar, client CRM,
 | **Failure forum (Phase 6c)** | Auth-gated route `/community/failures` — community journal of things that didn't work. New `failure_notes` table (auth-only SELECT, owner-only INSERT/DELETE). 5-posts-per-24h rolling rate limit enforced server-side. Two-step delete confirm. NavBar entry. |
 | **BYOK (Phase 7)** | Per-user API keys for Anthropic / Replicate / ElevenLabs / OpenAI. New `user_api_keys` table (owner-only RLS, AES-256-GCM at rest with key derived from `SUPABASE_SERVICE_ROLE_KEY`). `/me/keys` settings page with paste/save/delete + redacted display. Resolver `getUserApiKey` + `getEffectiveKey` consulted by every provider call site (coach stream + tutor + suggestions + image/text/voice generators). Model labels get a `-byok` suffix when the user's key was used. NavBar entry. |
 | **Work layer (Phase 8)** | New `job_audits` table (RLS owner-only, cross-cutting per-user not project-scoped). `/me/work` landing + `/me/work/audit/new` 5-question form + `/me/work/audit/[id]` detail with AI-generated personal report (markdown, BYOK-aware Anthropic call, wholesome-charter-bound system prompt). `/me/work/packs` + `/me/work/packs/[slug]` curated profession packs as version-controlled markdown in `content/profession-packs/` (4 to start: designer, writer, marketer, software-engineer). Targets the "Professional" audience the rest of the app didn't directly serve. NavBar entry "Work". |
-| **Tests** | 133 Playwright E2E tests (62 CI parallel + 15 mobile + 15 accessibility + 4 portfolio + 6 earnings + 3 pricing + 7 learn + 8 onboarding-community + 5 byok + 6 work + 2 cap stress local-only). Per-worker auth fixture (`tests/e2e/auth-fixture.ts`). Local full suite ~2 min parallel, CI ~3.5 min. |
+| **Client CRM (Phase 9)** | New `clients` table (RLS owner-only, status enum active/paused/past). `/me/clients` roster grouped by status, `/me/clients/new` + `/me/clients/[id]` (detail with edit + linked earnings + lifetime totals + delete). `earnings.client_id` FK so an earning can link to both a project AND a client. NavBar entry "Clients". |
+| **Project templates** | 7 curated templates in `src/lib/templates/projects.ts` (YouTube channel, freelance design, freelance writing, SaaS, newsletter, job search, exploration). `/projects/new` shows template cards above the form; `?template=<slug>` prefills name/type/description. |
+| **Studio code drafter** | New `code` kind on the existing text drafter — system prompt outputs a single fenced code block, idiomatic for the named language. Reuses the same Studio panel + gallery. |
+| **Learn — Tool Fluency branch** | Third Learn branch alongside Foundations + Prompt Craft. 4 lessons to start (tool-fluency-01 through 04). Adding more branches is one type-union edit + dropping `*.md` files. |
+| **Tests** | 143 Playwright E2E tests (62 CI parallel + 15 mobile + 15 accessibility + 4 portfolio + 6 earnings + 3 pricing + 7 learn + 8 onboarding-community + 5 byok + 6 work + 5 clients + 5 templates-and-extensions + 2 cap stress local-only). Per-worker auth fixture (`tests/e2e/auth-fixture.ts`). Local full suite ~2 min parallel, CI ~3.5 min. |
 | **Mobile + Accessibility** | `tests/e2e/mobile.spec.ts` (9 routes at 375px, no horizontal overflow) + `tests/e2e/accessibility.spec.ts` (axe-core, 9 routes, zero serious/critical WCAG A/AA violations). |
 | **Error monitoring** | Sentry SDK wired in (`@sentry/nextjs`, `sentry.{server,edge}.config.ts`, `instrumentation.ts`, `instrumentation-client.ts`, `next.config.ts` wrapped). DSN-gated; no-op until Halli adds `SENTRY_DSN` + `NEXT_PUBLIC_SENTRY_DSN` to Vercel. |
 | **Performance baseline** | `npm run lighthouse` audits homepage/login/signup against the live deploy. Current: homepage 96/100/100/100, login 79/100/100/100, signup 94/100/100/100. |
@@ -286,6 +290,63 @@ Same four keys as above. Used by both workflows.
 ## 14. Session Log
 
 > Add a new entry to the **top** of this list for each work session. Include: date, what shipped, decisions made, and anything left dangling.
+
+### 2026-05-02 (later) — Phase 9: Client CRM + 3 small extensions
+
+After Phase 8 (Work layer), shipped four more autonomous builds before pivoting to a deferred design/UX pass. Three are small additions to existing systems; one is a new layer.
+
+**Phase 9 — Client CRM v1. Shipped:**
+- Migration [supabase/migrations/20260502011015_add_clients.sql](supabase/migrations/20260502011015_add_clients.sql): `clients` table (RLS owner-only, all-CRUD, status enum `active`/`paused`/`past`, name + email + company + notes columns, hard length caps, `updated_at` trigger). Optional `earnings.client_id` FK so an earning can link to a client (nullable, ON DELETE SET NULL).
+- New routes: [/me/clients](src/app/(app)/me/clients/page.tsx) (roster grouped by status), [/me/clients/new](src/app/(app)/me/clients/new/page.tsx), [/me/clients/[id]](src/app/(app)/me/clients/[id]/page.tsx) (detail with edit form + linked earnings list + lifetime totals + delete).
+- Server actions [src/app/(app)/me/clients/actions.ts](src/app/(app)/me/clients/actions.ts): `createClientRecord` / `updateClientRecord` / `deleteClientRecord` (server-side `redirect("/me/clients")` after delete so the user lands somewhere coherent).
+- Updated earnings page + form + `addEarning` action to support optional `client_id` field. The earnings dropdown lists all non-past clients alphabetically. Linking an earning to a client surfaces it on that client's detail page with currency-aware totals.
+- NavBar entry "Clients" (md: only).
+- 5 new E2E tests in [tests/e2e/clients.spec.ts](tests/e2e/clients.spec.ts): create + roster, edit-status moves between sections, delete + redirect, RLS cross-user, link an earning + show on client detail.
+
+**Project template gallery (small build):**
+- [src/lib/templates/projects.ts](src/lib/templates/projects.ts): 7 curated Project templates (YouTube channel, freelance design, freelance writing, SaaS/indie product, newsletter, job search, exploration) with default name/type/description.
+- Updated [/projects/new](src/app/(app)/projects/new/page.tsx) to show template cards above the form when no template is selected, and prefill the form fields when `?template=<slug>` is in the URL. Banner shows "Pre-filled from X · Clear template" when a template is applied.
+- 2 new E2E tests in [tests/e2e/templates-and-extensions.spec.ts](tests/e2e/templates-and-extensions.spec.ts): templates render + clicking prefills form, creating from a template lands on a real project.
+
+**Studio code helper (small extension):**
+- [src/lib/studio/generate-text.ts](src/lib/studio/generate-text.ts): added `code` to `TextDraftKind` union with a system-prompt instruction telling the model to output ONLY a single fenced code block (e.g. ```python). No prose. Idiomatic and minimal.
+- [src/app/(app)/projects/[id]/studio-actions.ts](src/app/(app)/projects/[id]/studio-actions.ts): `VALID_TEXT_KINDS` updated to include `code`.
+- [src/app/(app)/projects/[id]/StudioTextPanel.tsx](src/app/(app)/projects/[id]/StudioTextPanel.tsx): added "Code" to the kind dropdown.
+- 1 new E2E test confirming the kind=code flows through to the mock-mode generated text.
+
+**Tool Fluency lesson branch (small extension):**
+- [src/types/learn.ts](src/types/learn.ts): added `tool-fluency` to `LearnBranch` union + its label/description in the registry. Now 3 branches.
+- 4 new lessons in [content/lessons/](content/lessons/):
+  - `tool-fluency-01-not-every-tool` — small toolkit beats large one
+  - `tool-fluency-02-pick-the-right-model` — when to reach for cheap vs frontier
+  - `tool-fluency-03-stitching-tools` — short workflow chains over all-in-ones
+  - `tool-fluency-04-when-not-to-use-ai` — fluency means knowing when to skip
+- The lesson registry is generic over branch — adding a new branch was a one-line type change + 4 markdown files. No UI change.
+- 2 new E2E tests confirming the third branch shows on /learn and a Tool Fluency lesson loads.
+
+**Total project E2E count after this session:** 143 (was 133). Spec breakdown: 62 CI parallel + 15 mobile + 15 a11y + 4 portfolio + 6 earnings + 3 pricing + 7 learn + 8 onboarding-community + 5 byok + 6 work + 5 clients + 5 templates-and-extensions + 2 cap stress local-only.
+
+**Decisions:**
+- **Client CRM is per-user, not per-project.** A client that spans multiple projects shows up once. The earnings linkage is the bridge — an earning can attach to BOTH a project and a client without forcing one or the other.
+- **Templates as code, not DB rows.** Same reasoning as lessons + profession packs: version-controlled, reviewable, deployable. Adding more is editing the array. No CMS.
+- **Code as a kind on the existing text drafter, not a new Studio tool.** The text drafter already had a kind enum; code is just one more value. Avoided spinning up a 4th panel + new schema for what's effectively a system-prompt variant.
+- **Tool Fluency is 4 lessons to start, not 6.** Same shape as the seeded Foundations + Prompt Craft branches. Adding more is dropping `*.md` files.
+- **No Stripe, no marketplace, no opportunity radar this session.** Stripe needs Halli's setup; marketplace/radar are bigger features that need real users first.
+
+**Hiccups + fixes:**
+- First Client CRM test run: 4/5 passed. The "edit status to past moves to past section" test failed because Playwright's `waitForURL` after the edit submit matched the same URL we were already on, so it didn't actually wait for the action to complete. Fixed by waiting for the detail page header to show "Client · Past" before navigating away — that's a real signal the server action committed and the page re-rendered.
+
+**Robustness checklist:**
+- ✅ E2E coverage across all 4 builds (13 new tests, all green sequentially).
+- ✅ RLS verified on Client CRM via cross-user spec.
+- ✅ Template prefill is server-side default value (no client state weirdness).
+- ✅ Type-check + production build clean.
+
+**What's still pending (committed deferred queue):**
+- Stripe payments — needs Halli's Stripe account.
+- Mobile + a11y sweep on new `/me/keys`, `/me/work/*`, `/me/clients/*`, `/me/work/packs/*` routes.
+- Design / UX v1 pass — Halli explicitly flagged this is the next big thing after these features land. Visual identity, per-layer accents, onboarding polish, celebration moments, real mobile UX (not just "doesn't break"). This is queued to be the next session.
+
 
 ### 2026-05-02 — Phase 8: Work layer v1 (AI Audit + profession packs)
 

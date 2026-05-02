@@ -1,8 +1,12 @@
-export type LearnBranch = "foundations" | "prompt-craft";
+export type LearnBranch =
+  | "foundations"
+  | "prompt-craft"
+  | "tool-fluency";
 
 export const BRANCH_LABELS: Record<LearnBranch, string> = {
   foundations: "Foundations",
   "prompt-craft": "Prompt Craft",
+  "tool-fluency": "Tool Fluency",
 };
 
 export const BRANCH_DESCRIPTIONS: Record<LearnBranch, string> = {
@@ -10,9 +14,15 @@ export const BRANCH_DESCRIPTIONS: Record<LearnBranch, string> = {
     "A grounded mental model of what AI actually does — and doesn't.",
   "prompt-craft":
     "The shape of asks that get useful answers, and the moves that fix bad ones.",
+  "tool-fluency":
+    "Picking the right tool for the job and using it well — without buying every shiny new thing.",
 };
 
-export const BRANCH_ORDER: LearnBranch[] = ["foundations", "prompt-craft"];
+export const BRANCH_ORDER: LearnBranch[] = [
+  "foundations",
+  "prompt-craft",
+  "tool-fluency",
+];
 
 export interface LessonMeta {
   slug: string;

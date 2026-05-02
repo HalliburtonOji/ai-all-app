@@ -21,6 +21,7 @@ const VALID_TEXT_KINDS: ReadonlySet<TextDraftKind> = new Set([
   "email",
   "social_post",
   "caption",
+  "code",
   "general",
 ]);
 

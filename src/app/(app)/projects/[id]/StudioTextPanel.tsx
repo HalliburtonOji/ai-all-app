@@ -18,6 +18,7 @@ const KIND_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "email", label: "Email" },
   { value: "social_post", label: "Social post" },
   { value: "caption", label: "Caption" },
+  { value: "code", label: "Code" },
 ];
 
 export function StudioTextPanel({
