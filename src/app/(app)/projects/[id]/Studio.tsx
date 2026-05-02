@@ -1,15 +1,23 @@
 import type { StudioOutput } from "@/types/studio";
+import type { WorkflowChain } from "@/types/workflows";
 import { StudioToolGrid } from "./StudioToolGrid";
 import { StudioImagePanel } from "./StudioImagePanel";
 import { StudioTextPanel } from "./StudioTextPanel";
 import { StudioVoicePanel } from "./StudioVoicePanel";
 import { StudioEmailPanel } from "./StudioEmailPanel";
+import { WorkflowsPanel } from "./workflows/WorkflowsPanel";
 
-export type StudioActiveTool = "image" | "text" | "voice" | "email-reply";
+export type StudioActiveTool =
+  | "image"
+  | "text"
+  | "voice"
+  | "email-reply"
+  | "workflows";
 
 interface StudioProps {
   projectId: string;
   outputs: StudioOutput[];
+  workflowChains: WorkflowChain[];
   activeTool: StudioActiveTool | null;
   prefill?: string | null;
 }
@@ -22,6 +30,7 @@ interface StudioProps {
 export function Studio({
   projectId,
   outputs,
+  workflowChains,
   activeTool,
   prefill,
 }: StudioProps) {
@@ -64,6 +73,11 @@ export function Studio({
         projectId={projectId}
         outputs={outputs.filter((o) => o.kind === "text")}
       />
+    );
+  }
+  if (activeTool === "workflows") {
+    return (
+      <WorkflowsPanel projectId={projectId} chains={workflowChains} />
     );
   }
 

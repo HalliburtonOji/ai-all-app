@@ -12,7 +12,7 @@ interface StudioToolGridProps {
 }
 
 interface ToolDef {
-  id: "image" | "text" | "voice" | "email-reply";
+  id: "image" | "text" | "voice" | "email-reply" | "workflows";
   title: string;
   tagline: string;
   icon: string;
@@ -55,6 +55,15 @@ export function StudioToolGrid({ projectId, counts }: StudioToolGridProps) {
       icon: "✉️",
       // Email-reply outputs are stored as kind="text" with metadata.kind_hint=email_reply,
       // so they roll into the text count above. We don't double-count here.
+      badge: 0,
+    },
+    {
+      id: "workflows",
+      title: "Workflows",
+      tagline: "Save 2-5 step pipelines. Run them on fresh inputs.",
+      icon: "🔁",
+      // Workflow outputs land in the regular text gallery as their
+      // own studio_outputs rows, so no separate count here.
       badge: 0,
     },
   ];
