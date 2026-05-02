@@ -19,6 +19,7 @@ const MAX_VOICE_SCRIPT_LENGTH = 500;
 
 const VALID_TEXT_KINDS: ReadonlySet<TextDraftKind> = new Set([
   "email",
+  "email_reply",
   "social_post",
   "caption",
   "code",
@@ -136,6 +137,11 @@ export async function generateTextDraft(
     ? (rawKind as TextDraftKind)
     : "general";
 
+  // Extra context — for kinds like email_reply that take a long
+  // source-material input alongside the user's intent. Optional.
+  const extraContext =
+    ((formData.get("extra_context") as string) ?? "").trim() || null;
+
   if (prompt.length === 0) return { error: "Prompt is required" };
   if (prompt.length > MAX_TEXT_PROMPT_LENGTH) {
     return {
@@ -156,6 +162,7 @@ export async function generateTextDraft(
     kindHint,
     ctx.memoryHint,
     userKey,
+    extraContext,
   );
 
   if (result.error) return { error: result.error };

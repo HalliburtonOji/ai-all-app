@@ -369,7 +369,9 @@ export default async function ProjectDetailPage({
                     ? "voice"
                     : requestedStudio === "image"
                       ? "image"
-                      : null
+                      : requestedStudio === "email-reply"
+                        ? "email-reply"
+                        : null
               }
               prefill={requestedPrefill ?? null}
             />

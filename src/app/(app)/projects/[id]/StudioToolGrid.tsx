@@ -12,7 +12,7 @@ interface StudioToolGridProps {
 }
 
 interface ToolDef {
-  id: "image" | "text" | "voice";
+  id: "image" | "text" | "voice" | "email-reply";
   title: string;
   tagline: string;
   icon: string;
@@ -47,6 +47,15 @@ export function StudioToolGrid({ projectId, counts }: StudioToolGridProps) {
       tagline: "≤30s narration. Pick a voice, hit go.",
       icon: "🎙️",
       badge: counts.voice,
+    },
+    {
+      id: "email-reply",
+      title: "Email reply drafter",
+      tagline: "Paste a thread + your intent. Get a reply that matches the tone.",
+      icon: "✉️",
+      // Email-reply outputs are stored as kind="text" with metadata.kind_hint=email_reply,
+      // so they roll into the text count above. We don't double-count here.
+      badge: 0,
     },
   ];
 

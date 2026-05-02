@@ -171,10 +171,11 @@ test.describe("Studio v2 — image generation", () => {
     await expect(
       page.locator('[data-studio-tool-grid="true"]'),
     ).toBeVisible();
-    await expect(page.locator("[data-studio-tool-card]")).toHaveCount(3);
+    await expect(page.locator("[data-studio-tool-card]")).toHaveCount(4);
     // No specific panel rendered yet
     await expect(page.locator('[data-studio-panel="image"]')).toHaveCount(0);
     await expect(page.locator('[data-studio-panel="text"]')).toHaveCount(0);
     await expect(page.locator('[data-studio-panel="voice"]')).toHaveCount(0);
+    await expect(page.locator('[data-studio-panel="email-reply"]')).toHaveCount(0);
   });
 });

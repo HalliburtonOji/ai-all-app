@@ -3,8 +3,9 @@ import { StudioToolGrid } from "./StudioToolGrid";
 import { StudioImagePanel } from "./StudioImagePanel";
 import { StudioTextPanel } from "./StudioTextPanel";
 import { StudioVoicePanel } from "./StudioVoicePanel";
+import { StudioEmailPanel } from "./StudioEmailPanel";
 
-export type StudioActiveTool = "image" | "text" | "voice";
+export type StudioActiveTool = "image" | "text" | "voice" | "email-reply";
 
 interface StudioProps {
   projectId: string;
@@ -54,6 +55,14 @@ export function Studio({
         projectId={projectId}
         outputs={outputs.filter((o) => o.kind === "audio")}
         prefill={prefill ?? null}
+      />
+    );
+  }
+  if (activeTool === "email-reply") {
+    return (
+      <StudioEmailPanel
+        projectId={projectId}
+        outputs={outputs.filter((o) => o.kind === "text")}
       />
     );
   }
