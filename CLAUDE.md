@@ -207,7 +207,8 @@ Workflow recorder, template gallery, marketplace, opportunity radar, client CRM,
 | **Wins feed (Phase 6b)** | Public route `/wins` — aggregated feed of every public Studio output across all users. New `output_likes` table (anyone-SELECT for counts, owner-only INSERT/DELETE). Like button per tile, disabled for anonymous viewers. Like-toggle endpoint at `/api/wins/like`. NavBar entry. |
 | **Failure forum (Phase 6c)** | Auth-gated route `/community/failures` — community journal of things that didn't work. New `failure_notes` table (auth-only SELECT, owner-only INSERT/DELETE). 5-posts-per-24h rolling rate limit enforced server-side. Two-step delete confirm. NavBar entry. |
 | **BYOK (Phase 7)** | Per-user API keys for Anthropic / Replicate / ElevenLabs / OpenAI. New `user_api_keys` table (owner-only RLS, AES-256-GCM at rest with key derived from `SUPABASE_SERVICE_ROLE_KEY`). `/me/keys` settings page with paste/save/delete + redacted display. Resolver `getUserApiKey` + `getEffectiveKey` consulted by every provider call site (coach stream + tutor + suggestions + image/text/voice generators). Model labels get a `-byok` suffix when the user's key was used. NavBar entry. |
-| **Tests** | 127 Playwright E2E tests (62 CI parallel + 15 mobile + 15 accessibility + 4 portfolio + 6 earnings + 3 pricing + 7 learn + 8 onboarding-community + 5 byok + 2 cap stress local-only). Per-worker auth fixture (`tests/e2e/auth-fixture.ts`). Local full suite ~2 min parallel, CI ~3.5 min. |
+| **Work layer (Phase 8)** | New `job_audits` table (RLS owner-only, cross-cutting per-user not project-scoped). `/me/work` landing + `/me/work/audit/new` 5-question form + `/me/work/audit/[id]` detail with AI-generated personal report (markdown, BYOK-aware Anthropic call, wholesome-charter-bound system prompt). `/me/work/packs` + `/me/work/packs/[slug]` curated profession packs as version-controlled markdown in `content/profession-packs/` (4 to start: designer, writer, marketer, software-engineer). Targets the "Professional" audience the rest of the app didn't directly serve. NavBar entry "Work". |
+| **Tests** | 133 Playwright E2E tests (62 CI parallel + 15 mobile + 15 accessibility + 4 portfolio + 6 earnings + 3 pricing + 7 learn + 8 onboarding-community + 5 byok + 6 work + 2 cap stress local-only). Per-worker auth fixture (`tests/e2e/auth-fixture.ts`). Local full suite ~2 min parallel, CI ~3.5 min. |
 | **Mobile + Accessibility** | `tests/e2e/mobile.spec.ts` (9 routes at 375px, no horizontal overflow) + `tests/e2e/accessibility.spec.ts` (axe-core, 9 routes, zero serious/critical WCAG A/AA violations). |
 | **Error monitoring** | Sentry SDK wired in (`@sentry/nextjs`, `sentry.{server,edge}.config.ts`, `instrumentation.ts`, `instrumentation-client.ts`, `next.config.ts` wrapped). DSN-gated; no-op until Halli adds `SENTRY_DSN` + `NEXT_PUBLIC_SENTRY_DSN` to Vercel. |
 | **Performance baseline** | `npm run lighthouse` audits homepage/login/signup against the live deploy. Current: homepage 96/100/100/100, login 79/100/100/100, signup 94/100/100/100. |
@@ -285,6 +286,52 @@ Same four keys as above. Used by both workflows.
 ## 14. Session Log
 
 > Add a new entry to the **top** of this list for each work session. Include: date, what shipped, decisions made, and anything left dangling.
+
+### 2026-05-02 — Phase 8: Work layer v1 (AI Audit + profession packs)
+
+The Work layer was the next named priority after Phase 7. It serves the **Professional** audience — people who want to use AI to keep + grow their current job — which the Coach + Studio + Earn loop didn't directly target. Two things in one place: a personal AI Audit of your job (form → coach-written report) and a small set of curated profession packs (markdown, version-controlled).
+
+**Shipped:**
+- Migration [supabase/migrations/20260502005059_add_job_audits.sql](supabase/migrations/20260502005059_add_job_audits.sql): `job_audits` table with cross-cutting (not project-scoped) ownership, all-CRUD RLS owner-only, hard length caps on every text field, `summary` (≤20k char) + `model` columns to record what was generated and by which model, `updated_at` trigger.
+- Audit generator [src/lib/work/generate-audit.ts](src/lib/work/generate-audit.ts) — wholesome-charter system prompt that produces a structured 4-section markdown report (where AI is useful · where AI is not the right tool · three indispensable moves · one uncomfortable thing). BYOK-aware — uses the user's Anthropic key if present, else the platform key. Mock mode emits `[mock-audit] Personalised report for: <job_title>` so tests can assert generation fired and the inputs reached the prompt.
+- Server actions [src/app/(app)/me/work/actions.ts](src/app/(app)/me/work/actions.ts): `createJobAudit` (insert row → call generator → write summary back; two-write shape so a generation failure leaves a usable row to retry from), `regenerateAuditSummary`, `deleteJobAudit` (server-side `redirect("/me/work")` after delete so the user lands somewhere coherent).
+- Routes:
+  - [/me/work](src/app/(app)/me/work/page.tsx) — landing: explains the two halves, lists past audits (newest first, max 10), shows the top 6 packs as cards.
+  - [/me/work/audit/new](src/app/(app)/me/work/audit/new/page.tsx) — single-page form ([NewAuditForm.tsx](src/app/(app)/me/work/audit/new/NewAuditForm.tsx)) with 5 fields, 4 of which are skippable. Submit → server action → redirect to detail.
+  - [/me/work/audit/[id]](src/app/(app)/me/work/audit/[id]/page.tsx) — detail page: AI summary rendered as markdown via react-markdown + Tailwind typography, a `<details>` collapse showing the user's inputs, regenerate + delete buttons (in [AuditActions.tsx](src/app/(app)/me/work/audit/[id]/AuditActions.tsx) with two-step delete confirm).
+  - [/me/work/packs](src/app/(app)/me/work/packs/page.tsx) — pack catalog.
+  - [/me/work/packs/[slug]](src/app/(app)/me/work/packs/[slug]/page.tsx) — pack detail.
+- Profession packs as markdown in [content/profession-packs/](content/profession-packs/): 4 to start (designer, writer, marketer, software-engineer). Frontmatter `slug / title / summary / order` parsed by hand-rolled registry [src/lib/work/packs.ts](src/lib/work/packs.ts) — same shape as the lessons registry. Adding more is dropping `*.md` files.
+- NavBar entry "Work" (sm: only).
+- 6 new E2E tests in [tests/e2e/work.spec.ts](tests/e2e/work.spec.ts): create-audit-with-summary + persist, delete + redirect, RLS cross-user, missing-job-title rejection, packs catalog renders + opens detail, non-existent pack 404. All green sequentially in 27.5s.
+- Total project E2E count: **133** (62 CI parallel + 15 mobile + 15 a11y + 4 portfolio + 6 earnings + 3 pricing + 7 learn + 8 onboarding-community + 5 byok + 6 work + 2 cap stress local-only).
+
+**Decisions:**
+- **Single-page form, not a wizard.** The welcome flow uses 3 steps for 3 short questions; the audit has 5 longer text fields where seeing them all at once helps the user decide what to skip. Wizard would add friction without clarity.
+- **Two-write shape for audit creation.** Insert empty row first, then generate, then update with summary. This means a generation failure leaves a usable row the user can regenerate from rather than losing their inputs entirely. Trade: an extra DB roundtrip and a brief "summary pending" window. Worth it for the recovery path.
+- **Profession packs are markdown, not DB rows.** Same reasoning as Learn lessons — version-controlled, code-reviewed, deployed via the same pipeline. Adding a CMS would be one more system to babysit. Each pack lives at `content/profession-packs/<slug>.md`.
+- **4 packs to start, not 8.** Each is hand-written 250–500 words with the wholesome charter baked in. Adding more is content work, not a code change. The system can scale to dozens.
+- **Audit lives at `/me/work/`, not `/projects/[id]/`.** It's about the human's career, not a specific project. Separate cross-cutting layer alongside `/me/earnings` and `/me/keys`.
+- **Audit is BYOK-aware** — uses the user's Anthropic key if set. Same pattern as the coach stream + tutor + suggestions. Power users on free trial don't burn the platform budget for their own report.
+- **Wholesome charter baked into the system prompt.** Explicit "no fearmongering, no hype, no doom-scrolling" instructions. The output structure (3 useful + 2-4 not + 3 moves + 1 uncomfortable) is intentionally balanced so the report doesn't drift toward either reassurance or panic.
+
+**Hiccups + fixes:** none — built straight through. Type-check + production build + spec all green on first try.
+
+**Robustness checklist (Phase 8 gate):**
+- ✅ E2E coverage: create + persist + reload, delete + redirect, RLS cross-user, missing-input rejection, pack catalog + detail, 404.
+- ✅ RLS verified: spec includes a cross-user isolation test.
+- ✅ Wholesome-charter compliance baked into system prompt.
+- ✅ BYOK respected (uses `getUserApiKey` like every other Anthropic call site).
+- ✅ Type-check + production build clean.
+- ⏳ Real-deploy spot-check after Vercel ships — Halli to verify a real audit + browse a real pack.
+- ⏳ Mobile / a11y check on the new `/me/work/*` routes — deferred to a future sweep (low risk; pages use the same Tailwind responsive patterns as `/me/earnings`).
+
+**Next session candidates per master plan §16 (deferred items):**
+- Stripe payments + credit packs + Pro subscription — needs Halli's Stripe account, can't do autonomously.
+- More Studio tools (PDF/document reader, code helper, background remover).
+- Skill tree branches 3–5 (Tool Fluency / Application / Career & Money lessons).
+- Marketplace, opportunity radar, client CRM, multilingual, mobile-money rails — bigger features, more discussion needed.
+- Mobile + a11y sweep covering new `/me/keys`, `/me/work`, `/me/work/audit/*`, `/me/work/packs/*` routes.
 
 ### 2026-05-01 (autonomous, the BYOK ship) — Phase 7: Bring Your Own Keys (BYOK)
 
@@ -1074,10 +1121,23 @@ Guiding principles for every phase:
 
 **Robustness bar (cleared):** plaintext never reaches the browser (redacted server-side) · keys encrypted at rest · per-user RLS verified by spec · platform fallback intact.
 
+### Phase 8 — Work layer v1 · ✅ shipped 2026-05-02
+**Goal:** Serve the Professional audience — people who want to use AI to keep + grow their current job. The rest of the app's loop (Coach + Studio + Earn) was already there; the Work layer makes the "AI at Work" framing concrete.
+**Deliverables (all shipped):**
+- ✅ `job_audits` table (RLS owner-only, cross-cutting per-user not project-scoped, hard length caps on every text field).
+- ✅ AI Audit form at `/me/work/audit/new` — 5 questions, 4 of which are skippable. Submit → server action calls coach with wholesome-charter-bound system prompt → personalised markdown report saved + shown.
+- ✅ Detail page at `/me/work/audit/[id]` — markdown rendering, collapsed-inputs, regenerate, delete.
+- ✅ Profession packs as version-controlled markdown at `content/profession-packs/` — 4 to start (designer / writer / marketer / software-engineer). Catalog at `/me/work/packs`, detail at `/me/work/packs/[slug]`. Same registry pattern as Learn lessons.
+- ✅ NavBar "Work" entry.
+- ✅ 6 E2E tests including RLS cross-user, two-step delete, missing-input rejection, 404.
+- ✅ BYOK-aware (uses user's Anthropic key if set).
+
+**Robustness bar (cleared):** wholesome charter compliance baked into the system prompt · two-write shape so a generation failure leaves a recoverable row · RLS verified by spec · plaintext audit content never reaches non-owners.
+
 ### Stopping point
-End of Phase 7 = **5 product layers + onboarding + community + BYOK power-user mode**. Original 12-week MVP is now feature-complete except for Stripe payments (needs Halli's Stripe setup) and the deferred v2 items (Work layer, Studio tools 4+, skill-tree branches 3–5, marketplace, etc.).
+End of Phase 8 = **5 product layers + onboarding + community + BYOK + Work layer**. Original 12-week MVP is now feature-complete except for Stripe payments (needs Halli's Stripe setup) and the deferred v2 items (Studio tools 4+, skill-tree branches 3–5, marketplace, etc.).
 
 ### How to use this plan
 - Each phase is its own `/plan` session — drill into concrete file changes, ship, mark robustness checklist done, then move on.
 - The full-app robustness bar (mobile, accessibility, perf, error UX) is enforced **per phase**, not deferred. Phase 3 is the "deliberate hardening" phase but earlier phases must already meet the bar for what they ship.
-- Deferred (not abandoned, just sequenced after Phase 6): BYOK + Stripe payments, Work layer (AI Audit, profession packs), Studio tools 4+, Skill tree branches 3–5 (Tool Fluency / Application / Career & Money), marketplace, opportunity radar, client CRM, multilingual, mobile-money rails, workflow recorder, template gallery.
+- Deferred (not abandoned, just sequenced after Phase 8): Stripe payments, Studio tools 4+, Skill tree branches 3–5 (Tool Fluency / Application / Career & Money), marketplace, opportunity radar, client CRM, multilingual, mobile-money rails, workflow recorder, template gallery.
