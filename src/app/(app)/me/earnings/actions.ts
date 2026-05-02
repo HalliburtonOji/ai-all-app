@@ -26,6 +26,7 @@ export async function addEarning(
   const occurredOn = ((formData.get("occurred_on") as string) ?? "").trim();
   const note = ((formData.get("note") as string) ?? "").trim();
   const projectId = ((formData.get("project_id") as string) ?? "").trim();
+  const clientId = ((formData.get("client_id") as string) ?? "").trim();
 
   if (!amountStr) return { error: "Amount is required" };
   const amountMajor = Number.parseFloat(amountStr);
@@ -73,11 +74,25 @@ export async function addEarning(
     resolvedProjectId = project.id;
   }
 
+  let resolvedClientId: string | null = null;
+  if (clientId) {
+    const { data: client } = await supabase
+      .from("clients")
+      .select("id, user_id")
+      .eq("id", clientId)
+      .maybeSingle();
+    if (!client || client.user_id !== user.id) {
+      return { error: "That client isn't yours" };
+    }
+    resolvedClientId = client.id;
+  }
+
   const { data, error } = await supabase
     .from("earnings")
     .insert({
       user_id: user.id,
       project_id: resolvedProjectId,
+      client_id: resolvedClientId,
       amount_cents: amountCents,
       currency: currency as Currency,
       source,

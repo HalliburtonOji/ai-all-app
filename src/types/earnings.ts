@@ -25,6 +25,7 @@ export interface Earning {
   id: string;
   user_id: string;
   project_id: string | null;
+  client_id?: string | null;
   amount_cents: number;
   currency: Currency;
   source: string;

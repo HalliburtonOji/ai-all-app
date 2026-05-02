@@ -12,11 +12,18 @@ interface ProjectOption {
   name: string;
 }
 
+interface ClientOption {
+  id: string;
+  name: string;
+}
+
 export function AddEarningForm({
   projects,
+  clients = [],
   defaultCurrency = "USD",
 }: {
   projects: ProjectOption[];
+  clients?: ClientOption[];
   defaultCurrency?: Currency;
 }) {
   const [error, setError] = useState<string | null>(null);
@@ -132,6 +139,25 @@ export function AddEarningForm({
             {projects.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block text-sm">
+          <span className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
+            Client (optional)
+          </span>
+          <select
+            name="client_id"
+            defaultValue=""
+            data-earning-input="client_id"
+            className="mt-1 block w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-black focus:border-black focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:focus:border-white"
+          >
+            <option value="">— none —</option>
+            {clients.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
               </option>
             ))}
           </select>

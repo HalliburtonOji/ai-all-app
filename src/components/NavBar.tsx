@@ -56,6 +56,12 @@ export function NavBar({ email }: { email: string }) {
               Earnings
             </Link>
             <Link
+              href="/me/clients"
+              className="hidden text-zinc-700 transition-colors hover:text-black md:inline dark:text-zinc-300 dark:hover:text-white"
+            >
+              Clients
+            </Link>
+            <Link
               href="/me/keys"
               className="hidden text-zinc-700 transition-colors hover:text-black md:inline dark:text-zinc-300 dark:hover:text-white"
             >

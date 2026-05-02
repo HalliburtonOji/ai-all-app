@@ -12,22 +12,29 @@ import { EarningsChart } from "./EarningsChart";
 export default async function EarningsPage() {
   const supabase = await createClient();
 
-  const [{ data: earningRows }, { data: projectRows }] = await Promise.all([
-    supabase
-      .from("earnings")
-      .select(
-        "id, user_id, project_id, amount_cents, currency, source, occurred_on, note, created_at",
-      )
-      .order("occurred_on", { ascending: false })
-      .limit(500),
-    supabase
-      .from("projects")
-      .select("id, name")
-      .order("updated_at", { ascending: false }),
-  ]);
+  const [{ data: earningRows }, { data: projectRows }, { data: clientRows }] =
+    await Promise.all([
+      supabase
+        .from("earnings")
+        .select(
+          "id, user_id, project_id, client_id, amount_cents, currency, source, occurred_on, note, created_at",
+        )
+        .order("occurred_on", { ascending: false })
+        .limit(500),
+      supabase
+        .from("projects")
+        .select("id, name")
+        .order("updated_at", { ascending: false }),
+      supabase
+        .from("clients")
+        .select("id, name")
+        .neq("status", "past")
+        .order("name", { ascending: true }),
+    ]);
 
   const earnings = (earningRows ?? []) as Earning[];
   const projects = (projectRows ?? []) as Array<{ id: string; name: string }>;
+  const clients = (clientRows ?? []) as Array<{ id: string; name: string }>;
   const projectLookup: Record<string, string> = {};
   for (const p of projects) projectLookup[p.id] = p.name;
 
@@ -97,7 +104,7 @@ export default async function EarningsPage() {
       </div>
 
       <div className="mt-6">
-        <AddEarningForm projects={projects} />
+        <AddEarningForm projects={projects} clients={clients} />
       </div>
 
       <section className="mt-8">
