@@ -24,6 +24,7 @@ const PRIMARY_LINKS: NavItem[] = [
 const SECONDARY_LINKS: NavItem[] = [
   { href: "/me/earnings", label: "Earnings" },
   { href: "/me/clients", label: "Clients", matchPrefix: "/me/clients" },
+  { href: "/me/opportunities", label: "Radar" },
   { href: "/community/failures", label: "Failures" },
   { href: "/me/keys", label: "Keys" },
 ];
