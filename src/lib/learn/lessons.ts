@@ -62,6 +62,8 @@ function parseFrontmatter(raw: string): { meta: LessonMeta; body: string } {
       order: Number.parseInt(fields.order, 10),
       estimated_minutes: Number.parseInt(fields.estimated_minutes, 10),
       summary: fields.summary,
+      try_it_rubric: fields.try_it_rubric || null,
+      try_it_prompt: fields.try_it_prompt || null,
     },
     body: body.trim(),
   };

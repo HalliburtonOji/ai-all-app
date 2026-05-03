@@ -5,6 +5,8 @@ branch: application
 order: 2
 estimated_minutes: 5
 summary: AI drafts. You edit. The edit pass is the skill that separates work-that-shipped from generic-AI-output. Here's how to do it well.
+try_it_prompt: Paste an AI-drafted thing you produced this week. The coach will run the 4-move edit pass on it.
+try_it_rubric: Apply the four moves from the lesson, in order. (1) Cut the throat-clearing — quote any sentences you'd delete and why. (2) Replace generic phrases — list 3 substitutions with specifics. (3) Add specifics where it generalised — point to one paragraph that needs a named example or detail. (4) Read-aloud check — flag any sentence that's too long or stilted. End with "the single change that would lift this most." Be terse. No filler.
 ---
 
 ## Why this matters

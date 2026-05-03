@@ -41,6 +41,19 @@ export interface LessonMeta {
   order: number;
   estimated_minutes: number;
   summary: string;
+  /**
+   * When set, the lesson player shows an "Submit your attempt" form
+   * below the lesson body. The string is fed to the coach as a
+   * grading rubric: what to praise, what to flag, what good looks
+   * like. Single-line in frontmatter (no multi-line YAML).
+   */
+  try_it_rubric: string | null;
+  /**
+   * Short prompt label for the exercise textarea, e.g.
+   * "Paste your rewritten prompt below". Optional; defaults to a
+   * generic placeholder if missing.
+   */
+  try_it_prompt: string | null;
 }
 
 export interface Lesson extends LessonMeta {

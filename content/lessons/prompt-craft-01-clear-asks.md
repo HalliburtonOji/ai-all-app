@@ -5,6 +5,8 @@ branch: prompt-craft
 order: 1
 estimated_minutes: 5
 summary: The best prompt is the one a smart, time-pressed colleague would understand on first read. Politeness is optional. Specificity is not.
+try_it_prompt: Paste the prompt you'd send. The coach will check it against the four-part shape from this lesson.
+try_it_rubric: A clear prompt names (1) who's writing/who's reading, (2) the actual ask, (3) constraints — length/tone/format/things to avoid, (4) the input/source material when relevant. Praise specifics; flag vague phrases like "be creative", "make it good", "professional but friendly", excessive politeness padding, and missing audience or constraints. Tone of feedback: direct, supportive, sharper-colleague — not condescending.
 ---
 
 ## Why this matters
