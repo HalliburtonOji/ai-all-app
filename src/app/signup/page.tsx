@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { signup, loginWithGoogle } from "@/app/auth/actions";
+import { getTranslator } from "@/lib/i18n/get-locale";
 
 export default async function SignupPage({
   searchParams,
@@ -7,6 +8,7 @@ export default async function SignupPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
+  const { t } = await getTranslator();
 
   return (
     <main className="bg-canvas relative flex min-h-screen flex-col items-center justify-center px-6">
@@ -22,10 +24,10 @@ export default async function SignupPage({
           AI All App
         </Link>
         <h1 className="mb-2 text-center text-3xl font-bold tracking-tight text-black dark:text-white">
-          Start free
+          {t("auth.signup.heading")}
         </h1>
         <p className="mb-8 text-center text-sm text-zinc-600 dark:text-zinc-400">
-          90 seconds. No credit card. Bring your own keys whenever.
+          {t("auth.signup.subhead")}
         </p>
 
         {error && (
@@ -39,7 +41,7 @@ export default async function SignupPage({
             name="email"
             type="email"
             required
-            placeholder="Email"
+            placeholder={t("auth.placeholder.email")}
             className="w-full rounded-md border border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2 text-[var(--foreground)] placeholder:text-zinc-400 focus:border-[var(--brand)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-soft)]"
           />
           <input
@@ -47,14 +49,14 @@ export default async function SignupPage({
             type="password"
             required
             minLength={6}
-            placeholder="Password (min 6 characters)"
+            placeholder={t("auth.placeholder.password")}
             className="w-full rounded-md border border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2 text-[var(--foreground)] placeholder:text-zinc-400 focus:border-[var(--brand)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-soft)]"
           />
           <button
             type="submit"
             className="w-full rounded-md bg-[var(--brand)] py-2 font-medium text-white shadow-sm transition-colors hover:bg-[var(--brand-strong)]"
           >
-            Sign up
+            {t("auth.signup.button")}
           </button>
         </form>
 
@@ -69,17 +71,17 @@ export default async function SignupPage({
             type="submit"
             className="w-full rounded-md border border-zinc-300 bg-white py-2 font-medium text-black transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800"
           >
-            Sign up with Google
+            {t("auth.signup.google")}
           </button>
         </form>
 
         <p className="mt-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
-          Already have an account?{" "}
+          {t("auth.signup.has_account")}{" "}
           <Link
             href="/login"
             className="font-medium text-black underline dark:text-white"
           >
-            Log in
+            {t("auth.signup.login_link")}
           </Link>
         </p>
       </div>

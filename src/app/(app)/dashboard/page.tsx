@@ -5,8 +5,10 @@ import type { Project } from "@/types/project";
 import type { UserFact } from "@/types/coach";
 import { UserMemoryPanel } from "./UserMemoryPanel";
 import { getFirstLesson } from "@/lib/learn/lessons";
+import { getTranslator } from "@/lib/i18n/get-locale";
 
 export default async function DashboardPage() {
+  const { t } = await getTranslator();
   const supabase = await createClient();
   const {
     data: { user },
@@ -100,22 +102,22 @@ export default async function DashboardPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-            Dashboard
+            {t("dashboard.kicker")}
           </p>
           <h1 className="mt-1 text-3xl font-bold tracking-tight text-black sm:text-4xl dark:text-white">
-            Welcome
-            {greetingName ? <span>, {greetingName}</span> : null}.
+            {greetingName
+              ? t("dashboard.greeting_named", { name: greetingName })
+              : t("dashboard.greeting_anon")}
           </h1>
           <p className="mt-2 max-w-xl text-sm text-zinc-600 dark:text-zinc-400">
-            Pick up a Project, learn something new, or just open the coach and
-            think out loud.
+            {t("dashboard.subhead")}
           </p>
         </div>
         <Link
           href="/projects/new"
           className="self-start rounded-md bg-[var(--brand)] px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[var(--brand-strong)] sm:self-auto"
         >
-          + New Project
+          {t("dashboard.new_project")}
         </Link>
       </div>
 

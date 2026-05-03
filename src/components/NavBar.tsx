@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { logout } from "@/app/auth/actions";
 import { SearchPaletteTrigger } from "@/components/SearchPalette";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import type { Locale } from "@/lib/i18n/locales";
 
 interface NavItem {
   href: string;
@@ -13,21 +15,19 @@ interface NavItem {
   matchPrefix?: string;
 }
 
-const PRIMARY_LINKS: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/projects", label: "Projects", matchPrefix: "/projects" },
-  { href: "/learn", label: "Learn", matchPrefix: "/learn" },
-  { href: "/me/work", label: "Work", matchPrefix: "/me/work" },
-  { href: "/wins", label: "Wins" },
-];
-
-const SECONDARY_LINKS: NavItem[] = [
-  { href: "/me/earnings", label: "Earnings" },
-  { href: "/me/clients", label: "Clients", matchPrefix: "/me/clients" },
-  { href: "/me/opportunities", label: "Radar" },
-  { href: "/community/failures", label: "Failures" },
-  { href: "/me/keys", label: "Keys" },
-];
+interface NavLabels {
+  dashboard: string;
+  projects: string;
+  learn: string;
+  work: string;
+  wins: string;
+  earnings: string;
+  clients: string;
+  opportunities: string;
+  failures: string;
+  keys: string;
+  logout: string;
+}
 
 function isActive(pathname: string, item: NavItem): boolean {
   if (item.matchPrefix) {
@@ -36,9 +36,33 @@ function isActive(pathname: string, item: NavItem): boolean {
   return pathname === item.href;
 }
 
-export function NavBar({ email }: { email: string }) {
+export function NavBar({
+  email,
+  labels,
+  locale,
+}: {
+  email: string;
+  labels: NavLabels;
+  locale: Locale;
+}) {
   const pathname = usePathname() ?? "";
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const PRIMARY_LINKS: NavItem[] = [
+    { href: "/dashboard", label: labels.dashboard },
+    { href: "/projects", label: labels.projects, matchPrefix: "/projects" },
+    { href: "/learn", label: labels.learn, matchPrefix: "/learn" },
+    { href: "/me/work", label: labels.work, matchPrefix: "/me/work" },
+    { href: "/wins", label: labels.wins },
+  ];
+
+  const SECONDARY_LINKS: NavItem[] = [
+    { href: "/me/earnings", label: labels.earnings },
+    { href: "/me/clients", label: labels.clients, matchPrefix: "/me/clients" },
+    { href: "/me/opportunities", label: labels.opportunities },
+    { href: "/community/failures", label: labels.failures },
+    { href: "/me/keys", label: labels.keys },
+  ];
 
   // Close the mobile sheet on route change.
   useEffect(() => {
@@ -82,6 +106,8 @@ export function NavBar({ email }: { email: string }) {
 
           <SearchPaletteTrigger />
 
+          <LanguageSwitcher current={locale} />
+
           <span
             className="hidden max-w-[160px] truncate text-xs text-zinc-500 md:inline"
             title={email}
@@ -94,7 +120,7 @@ export function NavBar({ email }: { email: string }) {
               type="submit"
               className="rounded-md border border-[var(--border-soft)] bg-transparent px-3 py-1.5 text-sm font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--surface-muted)]"
             >
-              Log out
+              {labels.logout}
             </button>
           </form>
 

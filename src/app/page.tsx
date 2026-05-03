@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
+import { getTranslator } from "@/lib/i18n/get-locale";
 
 const LAYERS = [
   {
@@ -41,6 +42,7 @@ const LAYERS = [
 ] as const;
 
 export default async function Home() {
+  const { t } = await getTranslator();
   const supabase = await createClient();
   const {
     data: { user },
@@ -54,19 +56,17 @@ export default async function Home() {
             aria-hidden
             className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--brand)]"
           />
-          A creator OS — wholesome, grounded, anti-hype
+          {t("home.kicker")}
         </div>
 
         <h1 className="mt-6 text-5xl font-bold tracking-tight text-black sm:text-6xl md:text-7xl dark:text-white">
-          Get genuinely good at AI.
+          {t("home.h1.line1")}
           <br />
-          <span className="text-[var(--brand-strong)]">Use it. Earn from it.</span>
+          <span className="text-[var(--brand-strong)]">{t("home.h1.line2")}</span>
         </h1>
 
         <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-zinc-700 sm:text-xl dark:text-zinc-300">
-          Workshop, classroom, and earnings hub in one place. Built for
-          people who want to learn AI, do real work with it, and earn from
-          it — without the doom-scrolling or the 50 K-influencer noise.
+          {t("home.subhead")}
         </p>
 
         <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -75,7 +75,7 @@ export default async function Home() {
               href="/dashboard"
               className="rounded-md bg-[var(--brand)] px-6 py-2.5 font-medium text-white shadow-sm transition-colors hover:bg-[var(--brand-strong)]"
             >
-              Go to your dashboard →
+              {t("home.cta.dashboard")}
             </Link>
           ) : (
             <>
@@ -83,13 +83,13 @@ export default async function Home() {
                 href="/signup"
                 className="rounded-md bg-[var(--brand)] px-6 py-2.5 font-medium text-white shadow-sm transition-colors hover:bg-[var(--brand-strong)]"
               >
-                Sign up — free tier
+                {t("home.cta.signup")}
               </Link>
               <Link
                 href="/login"
                 className="rounded-md border border-[var(--border-soft)] bg-[var(--surface)] px-6 py-2.5 font-medium text-[var(--foreground)] shadow-sm transition-colors hover:bg-[var(--surface-muted)]"
               >
-                I already have an account
+                {t("home.cta.login")}
               </Link>
             </>
           )}
@@ -103,7 +103,7 @@ export default async function Home() {
 
       <section className="mt-20 w-full max-w-5xl">
         <h2 className="text-center text-sm font-semibold uppercase tracking-wide text-zinc-500">
-          Six layers, one app
+          {t("home.layers.heading")}
         </h2>
         <ul className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {LAYERS.map((l) => (

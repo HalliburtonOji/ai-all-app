@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { login, loginWithGoogle } from "@/app/auth/actions";
+import { getTranslator } from "@/lib/i18n/get-locale";
 
 export default async function LoginPage({
   searchParams,
@@ -7,6 +8,7 @@ export default async function LoginPage({
   searchParams: Promise<{ error?: string; message?: string }>;
 }) {
   const { error, message } = await searchParams;
+  const { t } = await getTranslator();
 
   return (
     <main className="bg-canvas relative flex min-h-screen flex-col items-center justify-center px-6">
@@ -22,10 +24,10 @@ export default async function LoginPage({
           AI All App
         </Link>
         <h1 className="mb-2 text-center text-3xl font-bold tracking-tight text-black dark:text-white">
-          Welcome back
+          {t("auth.login.heading")}
         </h1>
         <p className="mb-8 text-center text-sm text-zinc-600 dark:text-zinc-400">
-          Sign in to pick up where you left off.
+          {t("auth.login.subhead")}
         </p>
 
         {message && (
@@ -44,21 +46,21 @@ export default async function LoginPage({
             name="email"
             type="email"
             required
-            placeholder="Email"
+            placeholder={t("auth.placeholder.email")}
             className="w-full rounded-md border border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2 text-[var(--foreground)] placeholder:text-zinc-400 focus:border-[var(--brand)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-soft)]"
           />
           <input
             name="password"
             type="password"
             required
-            placeholder="Password"
+            placeholder={t("auth.placeholder.password")}
             className="w-full rounded-md border border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2 text-[var(--foreground)] placeholder:text-zinc-400 focus:border-[var(--brand)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-soft)]"
           />
           <button
             type="submit"
             className="w-full rounded-md bg-[var(--brand)] py-2 font-medium text-white shadow-sm transition-colors hover:bg-[var(--brand-strong)]"
           >
-            Log in
+            {t("auth.login.button")}
           </button>
         </form>
 
@@ -73,17 +75,17 @@ export default async function LoginPage({
             type="submit"
             className="w-full rounded-md border border-zinc-300 bg-white py-2 font-medium text-black transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800"
           >
-            Sign in with Google
+            {t("auth.login.google")}
           </button>
         </form>
 
         <p className="mt-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
-          Don&apos;t have an account?{" "}
+          {t("auth.login.no_account")}{" "}
           <Link
             href="/signup"
             className="font-medium text-black underline dark:text-white"
           >
-            Sign up
+            {t("auth.login.signup_link")}
           </Link>
         </p>
       </div>
