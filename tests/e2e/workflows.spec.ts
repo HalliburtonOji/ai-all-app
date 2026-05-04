@@ -82,6 +82,93 @@ test.describe("Phase 12 — Workflow chains", () => {
     });
   });
 
+  test("Phase 17: run history persists + re-run from history", async ({
+    page,
+  }) => {
+    const projectId = await createProject(page, {
+      name: "Workflow history test",
+      type: "client",
+    });
+
+    await page.goto(`/projects/${projectId}?tab=studio&studio=workflows`);
+
+    // Create a single-step chain.
+    await page.locator('[data-workflow-new="true"]').click();
+    await page.locator('[data-workflow-name="true"]').fill("History test chain");
+    await page
+      .locator('[data-workflow-step-prompt="0"]')
+      .fill("Summarise: {{input}}");
+    await page.locator('[data-workflow-save="true"]').click();
+    await expect(page.locator('[data-workflows-list="true"]')).toBeVisible({
+      timeout: 10_000,
+    });
+
+    // Run it once.
+    await page.locator("[data-workflow-id]").first()
+      .locator('[data-workflow-run-button]').first().click();
+    await expect(
+      page.locator('[data-workflows-run-view="true"]'),
+    ).toBeVisible();
+    await page
+      .locator('[data-workflow-run-input="true"]')
+      .fill("First run input — talk transcript about freelancing.");
+    await page.locator('[data-workflow-run-submit="true"]').click();
+    await expect(page.locator("[data-workflow-result-order]")).toHaveCount(1, {
+      timeout: 15_000,
+    });
+
+    // History section appears with one row.
+    await expect(page.locator('[data-workflow-history="true"]')).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(page.locator("[data-workflow-run-id]")).toHaveCount(1);
+
+    // Re-run from history — input should auto-fill.
+    await page.locator("[data-workflow-rerun]").first().click();
+    await expect(page.locator("[data-workflow-result-order]")).toHaveCount(1, {
+      timeout: 15_000,
+    });
+    // History now has 2 rows (re-run persisted as a new row).
+    await expect(page.locator("[data-workflow-run-id]")).toHaveCount(2, {
+      timeout: 10_000,
+    });
+
+    // Delete one history row.
+    await page.locator("[data-workflow-run-delete]").first().click();
+    await expect(page.locator("[data-workflow-run-id]")).toHaveCount(1, {
+      timeout: 10_000,
+    });
+  });
+
+  test("Phase 17: instantiate a workflow from a starter template", async ({
+    page,
+  }) => {
+    const projectId = await createProject(page, {
+      name: "Workflow template test",
+      type: "client",
+    });
+
+    await page.goto(`/projects/${projectId}?tab=studio&studio=workflows`);
+    await expect(page.locator('[data-workflows-empty="true"]')).toBeVisible();
+
+    // Template gallery shows the curated starter chains.
+    const templates = page.locator("[data-workflow-template-slug]");
+    await expect(templates.first()).toBeVisible();
+    const templateCount = await templates.count();
+    expect(templateCount).toBeGreaterThanOrEqual(2);
+
+    // Use the "notes-to-thread" template.
+    await page
+      .locator('[data-workflow-template-use="notes-to-thread"]')
+      .click();
+    await expect(page.locator("[data-workflow-id]")).toHaveCount(1, {
+      timeout: 10_000,
+    });
+    const card = page.locator("[data-workflow-id]").first();
+    await expect(card).toContainText("Notes → tweet thread");
+    await expect(card).toContainText("2 steps");
+  });
+
   test("RLS: user B can't see user A's chains", async ({ browser }) => {
     const ctxA = await browser.newContext();
     const pageA = await ctxA.newPage();

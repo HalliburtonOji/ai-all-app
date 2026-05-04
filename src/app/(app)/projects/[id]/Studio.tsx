@@ -1,5 +1,5 @@
 import type { StudioOutput } from "@/types/studio";
-import type { WorkflowChain } from "@/types/workflows";
+import type { WorkflowChain, WorkflowRun } from "@/types/workflows";
 import { StudioToolGrid } from "./StudioToolGrid";
 import { StudioImagePanel } from "./StudioImagePanel";
 import { StudioTextPanel } from "./StudioTextPanel";
@@ -18,6 +18,7 @@ interface StudioProps {
   projectId: string;
   outputs: StudioOutput[];
   workflowChains: WorkflowChain[];
+  workflowRuns: WorkflowRun[];
   activeTool: StudioActiveTool | null;
   prefill?: string | null;
 }
@@ -31,6 +32,7 @@ export function Studio({
   projectId,
   outputs,
   workflowChains,
+  workflowRuns,
   activeTool,
   prefill,
 }: StudioProps) {
@@ -77,7 +79,11 @@ export function Studio({
   }
   if (activeTool === "workflows") {
     return (
-      <WorkflowsPanel projectId={projectId} chains={workflowChains} />
+      <WorkflowsPanel
+        projectId={projectId}
+        chains={workflowChains}
+        runs={workflowRuns}
+      />
     );
   }
 

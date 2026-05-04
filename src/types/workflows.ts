@@ -30,9 +30,8 @@ export interface WorkflowChain {
 }
 
 /**
- * One ephemeral execution of a chain. Stored only in client state;
- * we don't persist chain runs (the resulting studio_outputs are the
- * durable artifacts).
+ * One step's result inside a chain run. Stored both in the
+ * ephemeral run UI state and in the persisted workflow_runs row.
  */
 export interface WorkflowRunStepResult {
   order: number;
@@ -40,4 +39,17 @@ export interface WorkflowRunStepResult {
   output_id: string | null;
   content_text: string | null;
   error: string | null;
+}
+
+/** Persisted record of one chain execution (for history). */
+export interface WorkflowRun {
+  id: string;
+  user_id: string;
+  project_id: string;
+  chain_id: string | null;
+  chain_name: string;
+  input: string;
+  step_results: WorkflowRunStepResult[];
+  status: "completed" | "failed";
+  created_at: string;
 }

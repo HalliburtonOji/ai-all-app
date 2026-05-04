@@ -8,14 +8,18 @@ import {
   updateWorkflowChain,
   deleteWorkflowChain,
   runWorkflowChain,
+  createChainFromTemplate,
+  deleteWorkflowRun,
 } from "./actions";
 import {
   MAX_CHAIN_STEPS,
   MAX_RUN_INPUT_LEN,
   type WorkflowChain,
   type WorkflowChainStep,
+  type WorkflowRun,
   type WorkflowRunStepResult,
 } from "@/types/workflows";
+import { WORKFLOW_TEMPLATES } from "@/lib/templates/workflows";
 
 type View =
   | { kind: "list" }
@@ -34,9 +38,11 @@ const KIND_OPTIONS: Array<{ value: string; label: string }> = [
 export function WorkflowsPanel({
   projectId,
   chains,
+  runs,
 }: {
   projectId: string;
   chains: WorkflowChain[];
+  runs: WorkflowRun[];
 }) {
   const [view, setView] = useState<View>({ kind: "list" });
 
@@ -86,11 +92,80 @@ export function WorkflowsPanel({
         <ChainRunner
           projectId={projectId}
           chain={view.chain}
+          runs={runs.filter((r) => r.chain_id === view.chain.id)}
           onBack={() => setView({ kind: "list" })}
           onEdit={() => setView({ kind: "edit", chain: view.chain })}
         />
       )}
     </section>
+  );
+}
+
+function TemplateGallery({ projectId }: { projectId: string }) {
+  const [pendingSlug, setPendingSlug] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
+  const router = useRouter();
+
+  function onUseTemplate(slug: string) {
+    setError(null);
+    setPendingSlug(slug);
+    const formData = new FormData();
+    formData.set("project_id", projectId);
+    formData.set("slug", slug);
+    startTransition(async () => {
+      const result = await createChainFromTemplate(formData);
+      if (result.error) {
+        setError(result.error);
+        setPendingSlug(null);
+        return;
+      }
+      router.refresh();
+      setPendingSlug(null);
+    });
+  }
+
+  return (
+    <div data-workflow-templates="true" className="space-y-3">
+      <h3 className="text-sm font-semibold text-black dark:text-white">
+        Or start from a template
+      </h3>
+      <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {WORKFLOW_TEMPLATES.map((t) => (
+          <li
+            key={t.slug}
+            data-workflow-template-slug={t.slug}
+            className="rounded-lg border border-[var(--border-soft)] bg-[var(--surface)] p-4"
+          >
+            <p className="text-sm font-semibold text-[var(--foreground)]">
+              {t.title}
+            </p>
+            <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+              {t.blurb}
+            </p>
+            <p className="mt-2 text-xs text-zinc-500">{t.steps.length} steps</p>
+            <button
+              type="button"
+              onClick={() => onUseTemplate(t.slug)}
+              disabled={pendingSlug !== null}
+              data-workflow-template-use={t.slug}
+              className="mt-3 rounded-md border border-[var(--border-soft)] bg-transparent px-3 py-1 text-xs font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--surface-muted)] disabled:opacity-50"
+            >
+              {pendingSlug === t.slug ? "Adding…" : "Use template"}
+            </button>
+          </li>
+        ))}
+      </ul>
+      {error && (
+        <p
+          role="alert"
+          data-workflow-template-error="true"
+          className="text-sm text-red-700 dark:text-red-400"
+        >
+          {error}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -124,13 +199,16 @@ function ChainList({
       </div>
 
       {chains.length === 0 ? (
-        <p
-          data-workflows-empty="true"
-          className="mt-4 rounded-lg border border-dashed border-[var(--border-soft)] bg-[var(--surface)] p-6 text-sm text-zinc-600 dark:text-zinc-400"
-        >
-          No chains yet. Create one to save a multi-step recipe you run more
-          than once.
-        </p>
+        <div className="mt-4 space-y-6">
+          <p
+            data-workflows-empty="true"
+            className="rounded-lg border border-dashed border-[var(--border-soft)] bg-[var(--surface)] p-6 text-sm text-zinc-600 dark:text-zinc-400"
+          >
+            No chains yet. Create one to save a multi-step recipe you run more
+            than once.
+          </p>
+          <TemplateGallery projectId={projectId} />
+        </div>
       ) : (
         <ul
           data-workflows-list="true"
@@ -450,11 +528,13 @@ function ChainEditor({
 function ChainRunner({
   projectId,
   chain,
+  runs,
   onBack,
   onEdit,
 }: {
   projectId: string;
   chain: WorkflowChain;
+  runs: WorkflowRun[];
   onBack: () => void;
   onEdit: () => void;
 }) {
@@ -462,6 +542,7 @@ function ChainRunner({
   const [results, setResults] = useState<WorkflowRunStepResult[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
   function onRun() {
     setError(null);
@@ -477,6 +558,37 @@ function ChainRunner({
         return;
       }
       setResults(result.results ?? []);
+      // Refresh so the new persisted run appears in history.
+      router.refresh();
+    });
+  }
+
+  function onRerun(prior: WorkflowRun) {
+    setInput(prior.input);
+    setResults([]);
+    setError(null);
+    const formData = new FormData();
+    formData.set("id", chain.id);
+    formData.set("project_id", projectId);
+    formData.set("input", prior.input);
+    startTransition(async () => {
+      const result = await runWorkflowChain(formData);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      setResults(result.results ?? []);
+      router.refresh();
+    });
+  }
+
+  function onDeleteRun(runId: string) {
+    const formData = new FormData();
+    formData.set("id", runId);
+    formData.set("project_id", projectId);
+    startTransition(async () => {
+      await deleteWorkflowRun(formData);
+      router.refresh();
     });
   }
 
@@ -580,6 +692,61 @@ function ChainRunner({
             </li>
           ))}
         </ol>
+      )}
+
+      {runs.length > 0 && (
+        <div data-workflow-history="true" className="mt-6 space-y-2">
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            Past runs ({runs.length})
+          </h4>
+          <ul className="space-y-2">
+            {runs.map((r) => (
+              <li
+                key={r.id}
+                data-workflow-run-id={r.id}
+                className="rounded-md border border-[var(--border-soft)] bg-[var(--surface)] p-3"
+              >
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <p className="text-xs text-zinc-500">
+                    {new Date(r.created_at).toLocaleString()} ·{" "}
+                    <span
+                      className={
+                        r.status === "failed"
+                          ? "text-red-700 dark:text-red-400"
+                          : "text-emerald-700 dark:text-emerald-400"
+                      }
+                    >
+                      {r.status}
+                    </span>
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => onRerun(r)}
+                      disabled={isPending}
+                      data-workflow-rerun={r.id}
+                      className="rounded-md px-2 py-0.5 text-xs font-medium text-[var(--foreground)] hover:bg-[var(--surface-muted)] disabled:opacity-50"
+                    >
+                      Re-run
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onDeleteRun(r.id)}
+                      disabled={isPending}
+                      data-workflow-run-delete={r.id}
+                      className="rounded-md px-2 py-0.5 text-xs text-zinc-600 hover:bg-black/5 hover:text-red-700 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-red-400 disabled:opacity-50"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+                <p className="mt-1 truncate text-xs text-zinc-600 dark:text-zinc-400">
+                  Input: {r.input.length > 120 ? r.input.slice(0, 120) + "…" : r.input}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );

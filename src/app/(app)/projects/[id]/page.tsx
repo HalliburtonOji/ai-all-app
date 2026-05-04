@@ -19,7 +19,7 @@ import { DocumentsPanel } from "./documents/DocumentsPanel";
 import { RecentActivityStrip } from "@/components/RecentActivityStrip";
 import type { StudioOutput } from "@/types/studio";
 import type { ProjectDocument } from "@/types/documents";
-import type { WorkflowChain } from "@/types/workflows";
+import type { WorkflowChain, WorkflowRun } from "@/types/workflows";
 
 export default async function ProjectDetailPage({
   params,
@@ -226,6 +226,17 @@ export default async function ProjectDetailPage({
     .order("created_at", { ascending: false });
   const workflowChains = (chainRows ?? []) as WorkflowChain[];
 
+  // Load recent workflow runs for this project (last 30 across all chains).
+  const { data: runRows } = await supabase
+    .from("workflow_runs")
+    .select(
+      "id, user_id, project_id, chain_id, chain_name, input, step_results, status, created_at",
+    )
+    .eq("project_id", project.id)
+    .order("created_at", { ascending: false })
+    .limit(30);
+  const workflowRuns = (runRows ?? []) as WorkflowRun[];
+
   // Build the recent-activity strip's conversation pointer: pull the most
   // recent assistant message across this project's conversations and use
   // its content as a one-line preview.
@@ -375,6 +386,7 @@ export default async function ProjectDetailPage({
               projectId={project.id}
               outputs={studioOutputs}
               workflowChains={workflowChains}
+              workflowRuns={workflowRuns}
               activeTool={
                 requestedStudio === "text"
                   ? "text"

@@ -18,6 +18,7 @@ import {
   type WorkflowChainStep,
   type WorkflowRunStepResult,
 } from "@/types/workflows";
+import { getWorkflowTemplateBySlug } from "@/lib/templates/workflows";
 
 const ALLOWED_KIND_HINTS: ReadonlySet<TextDraftKind> = new Set([
   "general",
@@ -185,6 +186,39 @@ export async function updateWorkflowChain(
   return { chainId: id };
 }
 
+export async function createChainFromTemplate(
+  formData: FormData,
+): Promise<CreateChainResult> {
+  const projectId = ((formData.get("project_id") as string) ?? "").trim();
+  const slug = ((formData.get("slug") as string) ?? "").trim();
+  if (!projectId) return { error: "Missing project id" };
+  const template = getWorkflowTemplateBySlug(slug);
+  if (!template) return { error: "Unknown template" };
+
+  const ctx = await loadOwnedProject(projectId);
+  if ("error" in ctx) return { error: ctx.error };
+
+  const supabase = await createClient();
+  const { data: row, error } = await supabase
+    .from("workflow_chains")
+    .insert({
+      user_id: ctx.userId,
+      project_id: ctx.projectId,
+      name: template.defaultName,
+      description: template.defaultDescription,
+      steps: template.steps,
+    })
+    .select("id")
+    .single();
+
+  if (error || !row) {
+    return { error: "Could not save chain — try again." };
+  }
+
+  revalidatePath(`/projects/${projectId}`);
+  return { chainId: row.id };
+}
+
 export async function deleteWorkflowChain(formData: FormData) {
   const id = ((formData.get("id") as string) ?? "").trim();
   const projectId = ((formData.get("project_id") as string) ?? "").trim();
@@ -241,7 +275,7 @@ export async function runWorkflowChain(
   const supabase = await createClient();
   const { data: chain } = await supabase
     .from("workflow_chains")
-    .select("id, project_id, steps, user_id")
+    .select("id, name, project_id, steps, user_id")
     .eq("id", id)
     .maybeSingle();
   if (!chain || chain.user_id !== ctx.userId || chain.project_id !== projectId) {
@@ -277,6 +311,7 @@ export async function runWorkflowChain(
 
   const results: WorkflowRunStepResult[] = [];
   let previousOutput = "";
+  let runFailed = false;
 
   for (const step of steps) {
     const prompt = step.prompt_template
@@ -301,6 +336,7 @@ export async function runWorkflowChain(
         content_text: null,
         error: stepResult.error ?? "Step failed",
       });
+      runFailed = true;
       break;
     }
 
@@ -314,6 +350,38 @@ export async function runWorkflowChain(
     previousOutput = stepResult.contentText ?? "";
   }
 
+  // Persist the run for history. Best-effort; a logging failure
+  // doesn't fail the run from the user's perspective.
+  await supabase.from("workflow_runs").insert({
+    user_id: ctx.userId,
+    project_id: projectId,
+    chain_id: chain.id,
+    chain_name: (chain as { name?: string }).name ?? "Untitled chain",
+    input,
+    step_results: results,
+    status: runFailed ? "failed" : "completed",
+  });
+
   revalidatePath(`/projects/${projectId}`);
   return { results };
+}
+
+export async function deleteWorkflowRun(formData: FormData) {
+  const id = ((formData.get("id") as string) ?? "").trim();
+  const projectId = ((formData.get("project_id") as string) ?? "").trim();
+  if (!id || !projectId) return;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await supabase
+    .from("workflow_runs")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", user.id);
+
+  revalidatePath(`/projects/${projectId}`);
 }
