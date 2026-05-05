@@ -101,10 +101,14 @@ export function StudioTranscribePanel({
         ← All Studio tools
       </Link>
       <div>
-        <h2 className="text-xl font-semibold text-black dark:text-white">
+        <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border-soft)] bg-[var(--surface)] px-3 py-1 text-xs font-medium text-[var(--brand-strong)] shadow-sm">
+          <span aria-hidden className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--studio-accent)]" />
+          Studio · Transcribe
+        </div>
+        <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[var(--foreground)] sm:text-3xl">
           Transcribe audio
         </h2>
-        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+        <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">
           Drop a voice memo, podcast clip, or interview. We send it to Whisper
           and save the transcript here. Files up to 25 MB. Source audio is
           discarded after transcription.

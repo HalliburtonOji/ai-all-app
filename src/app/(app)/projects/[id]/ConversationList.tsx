@@ -28,9 +28,9 @@ export function ConversationList({
       */}
       <details
         open
-        className="rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
+        className="rounded-2xl border border-[var(--border-soft)] bg-[var(--surface)] shadow-sm"
       >
-        <summary className="flex cursor-pointer items-center justify-between border-b border-zinc-200 px-3 py-2 text-sm font-medium text-black md:hidden dark:border-zinc-800 dark:text-white">
+        <summary className="flex cursor-pointer items-center justify-between border-b border-[var(--border-soft)] px-4 py-3 text-sm font-medium text-[var(--foreground)] md:hidden">
           <span>
             Conversations{" "}
             <span className="text-zinc-500">({conversations.length})</span>
@@ -41,11 +41,11 @@ export function ConversationList({
         </summary>
 
         <div className="flex flex-col">
-          <form action={createConversation} className="p-2">
+          <form action={createConversation} className="p-3">
             <input type="hidden" name="project_id" value={projectId} />
             <button
               type="submit"
-              className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-left text-sm font-medium text-black transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800"
+              className="w-full rounded-md border border-dashed border-[var(--border-soft)] bg-transparent px-3 py-2 text-left text-sm font-medium text-[var(--foreground)] transition-colors hover:border-[var(--brand)] hover:bg-[var(--brand-soft)]/30 hover:text-[var(--brand-strong)]"
             >
               + New conversation
             </button>

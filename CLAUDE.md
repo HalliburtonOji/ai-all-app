@@ -291,6 +291,51 @@ Same four keys as above. Used by both workflows.
 
 > Add a new entry to the **top** of this list for each work session. Include: date, what shipped, decisions made, and anything left dangling.
 
+### 2026-05-05 — Phases 17–35 (autonomous batch)
+
+19 phases shipped between 2026-05-02 and 2026-05-05. Recap of what's now in `main`:
+
+**Studio breadth (Phases 17, 21, 25, 30):**
+- `workflow_runs` table + run history per chain + 4 starter chain templates (Phase 17)
+- Whisper audio transcription as a 6th Studio tool with BYOK (Phase 21)
+- Image transforms — upscale (Real-ESRGAN) + remove-bg (rembg) + variation (FLUX Redux) — single panel, three operations (Phases 25, 30)
+
+**Workflow recorder + community (Phases 19, 31, 32):**
+- Save the last 2–5 text outputs in a project as a workflow chain in one click (Phase 19)
+- `path_mate_signals` table + `/community/mates` with tag-overlap discovery and opt-in profile (Phase 31)
+- `marketplace_listings` table + `/community/marketplace` listing/discovery, no payments — buyers reach out via the seller's `/p/<username>` (Phase 32)
+
+**Lessons + content (Phases 24, 28, 29):**
+- `try_it_actions` chips on every lesson (24/24 covered) — pipe-delimited frontmatter `kind|label|prompt`, project-scoped chips stash a pending action in sessionStorage and route to `/projects` where a banner injects "Use this project →" overlays
+- 4 new profession packs: video editor, customer support, product manager, sales (8 packs total)
+- 5 new lessons (one per branch), 29 lessons total
+
+**Cohesion + design system (Phases 18, 20, 22, 23, 33, 34, 35):**
+- Phase 18: epic landing rebuild — 3 hero/loop/studio images generated via Replicate FLUX schnell (`scripts/generate-landing-assets.mjs`), bento grid for the 5 layers, editorial "What's not here" section, scroll-reveal animations via `animation-timeline: view()`
+- Phase 20: NavBar squishing fix (whitespace-nowrap, `max-w-7xl`, secondary links collapse into a "More ▾" dropdown), GitHub link removed from landing per Halli's request, dashboard polish, interactive lesson chip system
+- Phase 22: project detail header — bento card with brand→accent gradient bottom rule
+- Phase 23: login + signup get the same teal-torus right column as the landing hero
+- Phase 33: 8 in-app pages (`/learn`, `/projects`, `/wins`, `/community/failures`, `/me/work`, `/me/earnings`, `/me/clients`, `/me/opportunities`) all upgraded to brand-pill kicker + 5xl–6xl tracking-tight + bento-tile cards
+- Phase 34: lesson player, `/me/work/audit/[id]`, `/me/work/packs/[slug]`, `/welcome`, search palette, `/projects/new` all match
+- Phase 35: Coach UI (bubbles, ConversationList, ConversationItem), every Studio panel header (image / text / voice / email / transcribe / transform / workflows), Documents panel, ProjectTabs, StudioToolGrid, StudioGenerateForm — all migrated from legacy `border-zinc-200 / bg-black` styles to `var(--border-soft) / var(--brand)` design tokens
+
+**Misc autonomous polish (Phases 26, 27):**
+- Login + signup perf hygiene — drop `priority` from the right-column hero image, add `loading="lazy"` + `decoding="async"` so form (LCP) renders unblocked
+- `/me/settings` consolidation hub — Account info + Language switcher + 4 BYOK provider cards (Anthropic / OpenAI / Replicate / ElevenLabs). NavBar "Keys" → "Settings" (en/fr/sw). Old `/me/keys` route preserved for compatibility.
+
+**Test count:** ~165 E2E tests now. Targeted specs added per phase: workflow-recorder · transcribe · transform-image · path-mates · marketplace · lesson-actions. Type-check stays clean across every commit.
+
+**Decisions worth remembering:**
+- All path-prefix RLS-protected Storage uploads share the same `studio-images` bucket. Bucket name is cosmetic; the `${userId}/${projectId}/...` path convention is what enforces isolation. Don't rename the bucket without migrating `storage.objects`.
+- Background-remove + variation use Replicate models without pinned SHAs. If Replicate updates `cjwbw/rembg` or `black-forest-labs/flux-redux-dev` and breaks input shape, mock-mode tests stay green but real-mode users see a clear error. Re-pin the SHAs before public launch.
+- Pending lesson actions live in sessionStorage, NOT cookies/DB. Cleared after 30 min OR when the user picks a project from `PendingActionBanner`. No persistence across devices is intentional.
+- "What's not here" + "Path-mate matching" + "Marketplace" all sit under `/community/*` and require auth. Anonymous visitors get the wins feed only.
+- Editorial voice on every heading: tracking-tight, period-terminated when declarative. ("Your client roster.", "What people are shipping.", "Your projects.")
+
+**What remains queued (not blocked):** mobile + a11y sweep on the new community routes (mates, marketplace) and Studio transcribe/transform panels — both are layout-trivial so risk is low; defer to next session.
+
+**What remains blocked on Halli:** Stripe + Pro subscription, mobile-money rails (Paystack/Flutterwave), email-provider notifications (Resend/Postmark), custom domain, Sentry DSN activation in Vercel.
+
 ### 2026-05-02 (later again) — Phase 10: Document reader (PDF Q&A)
 
 After the 10-build research pass, the user picked the next autonomous build (skipping anything needing Halli's external accounts). Document reader was the biggest unmet capability — designers reading briefs, freelancers reading contracts, professionals reading specs all need to ask the coach about a PDF.

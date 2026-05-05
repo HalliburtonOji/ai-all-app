@@ -103,22 +103,20 @@ export function DocumentsPanel({
   return (
     <div data-docs-panel="true" className="mt-4 space-y-6">
       <header>
-        <div className="flex items-center gap-2">
+        <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border-soft)] bg-[var(--surface)] px-3 py-1 text-xs font-medium text-[var(--brand-strong)] shadow-sm">
           <span
             aria-hidden
-            className="inline-block h-2 w-2 rounded-full"
+            className="inline-block h-1.5 w-1.5 rounded-full"
             style={{ background: "var(--studio-accent)" }}
           />
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-            Docs
-          </p>
+          Docs
         </div>
-        <h2 className="mt-1 text-xl font-semibold text-black dark:text-white">
+        <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[var(--foreground)] sm:text-3xl">
           Upload + ask
         </h2>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          Drop a PDF in here — a contract, a brief, a research paper — and
-          ask the coach about it. Stays scoped to this project.
+        <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">
+          Drop a PDF in here — a contract, a brief, a research paper — and ask
+          the coach about it. Stays scoped to this project.
         </p>
       </header>
 

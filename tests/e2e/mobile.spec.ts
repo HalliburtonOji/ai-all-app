@@ -96,9 +96,10 @@ test.describe("Mobile pass — iPhone SE 375px", () => {
     await expect(
       page.locator('[data-studio-tool-grid="true"]'),
     ).toBeVisible();
-    // Five tool cards (image / text / voice / email-reply / workflows),
-    // all clickable, all visible (1-col stack on mobile).
-    await expect(page.locator("[data-studio-tool-card]")).toHaveCount(5);
+    // Seven tool cards (image / text / voice / transcribe / transform /
+    // email-reply / workflows), all clickable, all visible (1-col stack
+    // on mobile).
+    await expect(page.locator("[data-studio-tool-card]")).toHaveCount(7);
     for (const id of ["image", "text", "voice"]) {
       await expect(
         page.locator(`[data-studio-tool-card="${id}"]`),

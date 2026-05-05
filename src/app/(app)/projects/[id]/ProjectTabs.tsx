@@ -50,7 +50,7 @@ export function ProjectTabs({
   return (
     <nav
       aria-label="Project view"
-      className="flex items-center gap-1 border-b border-zinc-200 dark:border-zinc-800"
+      className="flex items-center gap-1 border-b border-[var(--border-soft)]"
     >
       <TabLink
         href={coachUrl}
@@ -108,20 +108,20 @@ function TabLink({
       aria-current={active ? "page" : undefined}
       className={`relative flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${
         active
-          ? "text-black dark:text-white"
-          : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100"
+          ? "text-[var(--brand-strong)]"
+          : "text-zinc-500 hover:text-[var(--foreground)]"
       }`}
     >
       <span>{label}</span>
       {badge && (
-        <span className="rounded-full bg-zinc-200/70 px-2 py-0.5 text-[10px] font-normal text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+        <span className="rounded-full bg-[var(--surface-muted)] px-2 py-0.5 text-[10px] font-normal text-zinc-600 dark:text-zinc-400">
           {badge}
         </span>
       )}
       {active && (
         <span
           aria-hidden
-          className="absolute inset-x-2 -bottom-px h-px bg-black dark:bg-white"
+          className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-[var(--brand)]"
         />
       )}
     </Link>

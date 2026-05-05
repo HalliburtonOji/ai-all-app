@@ -67,10 +67,14 @@ export function StudioVoicePanel({
         ← All Studio tools
       </Link>
       <div>
-        <h2 className="text-xl font-semibold text-black dark:text-white">
+        <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border-soft)] bg-[var(--surface)] px-3 py-1 text-xs font-medium text-[var(--brand-strong)] shadow-sm">
+          <span aria-hidden className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--studio-accent)]" />
+          Studio · Voice
+        </div>
+        <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[var(--foreground)] sm:text-3xl">
           Voice-over
         </h2>
-        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+        <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">
           Type a short script, pick a voice, get an audio clip up to ~30
           seconds.
         </p>
@@ -79,7 +83,7 @@ export function StudioVoicePanel({
       <form
         ref={formRef}
         action={handleSubmit}
-        className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950"
+        className="rounded-xl border border-[var(--border-soft)] bg-[var(--surface)] p-5"
         data-studio-form="voice"
       >
         <input type="hidden" name="project_id" value={projectId} />
@@ -143,7 +147,7 @@ export function StudioVoicePanel({
             type="submit"
             disabled={isPending || overCap || script.trim().length === 0}
             data-studio-generate-button="voice"
-            className="shrink-0 rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+            className="shrink-0 rounded-md bg-[var(--brand)] px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-[var(--brand-strong)] hover:shadow-md disabled:opacity-50"
           >
             {isPending ? "Generating…" : "Generate voice-over"}
           </button>

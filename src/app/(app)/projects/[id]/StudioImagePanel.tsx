@@ -21,10 +21,14 @@ export function StudioImagePanel({
     >
       <BackToToolGrid projectId={projectId} />
       <div>
-        <h2 className="text-xl font-semibold text-black dark:text-white">
+        <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border-soft)] bg-[var(--surface)] px-3 py-1 text-xs font-medium text-[var(--brand-strong)] shadow-sm">
+          <span aria-hidden className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--studio-accent)]" />
+          Studio · Image
+        </div>
+        <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[var(--foreground)] sm:text-3xl">
           Image generator
         </h2>
-        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+        <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">
           Generate 1024×1024 images for this project. Each generation uses what
           the coach remembers.
         </p>

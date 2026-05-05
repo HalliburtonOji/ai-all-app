@@ -97,12 +97,15 @@ export function StudioToolGrid({ projectId, counts }: StudioToolGridProps) {
       className="mt-4 space-y-6"
     >
       <div>
-        <h2 className="text-xl font-semibold text-black dark:text-white">
+        <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border-soft)] bg-[var(--surface)] px-3 py-1 text-xs font-medium text-[var(--brand-strong)] shadow-sm">
+          <span aria-hidden className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--studio-accent)]" />
           Studio
+        </div>
+        <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[var(--foreground)] sm:text-3xl">
+          Tools attached to this project.
         </h2>
-        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-          Tools attached to this project. Outputs are saved here and
-          visible only to you.
+        <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">
+          Outputs are saved here and visible only to you.
         </p>
       </div>
 
@@ -112,7 +115,7 @@ export function StudioToolGrid({ projectId, counts }: StudioToolGridProps) {
             <Link
               href={`/projects/${projectId}?tab=studio&studio=${t.id}`}
               data-studio-tool-card={t.id}
-              className="block rounded-lg border border-zinc-200 bg-white p-4 transition-colors hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-600 dark:hover:bg-zinc-900"
+              className="bento-tile block rounded-xl border border-[var(--border-soft)] bg-[var(--surface)] p-5"
             >
               <div className="flex items-center justify-between gap-3">
                 <span className="text-2xl" aria-hidden>

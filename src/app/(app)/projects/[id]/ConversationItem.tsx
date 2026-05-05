@@ -31,8 +31,8 @@ export function ConversationItem({
 
   const baseClass = `block rounded-md transition-colors ${
     isCurrent
-      ? "bg-zinc-100 dark:bg-zinc-800"
-      : "hover:bg-zinc-50 dark:hover:bg-zinc-900"
+      ? "bg-[var(--brand-soft)] text-[var(--brand-ink)]"
+      : "hover:bg-[var(--surface-muted)]"
   }`;
 
   if (mode === "rename") {
@@ -46,7 +46,7 @@ export function ConversationItem({
             })
           }
           className={`flex flex-col gap-2 rounded-md p-2 ${
-            isCurrent ? "bg-zinc-100 dark:bg-zinc-800" : ""
+            isCurrent ? "bg-[var(--brand-soft)]" : ""
           }`}
         >
           <input type="hidden" name="id" value={conversation.id} />
@@ -61,13 +61,13 @@ export function ConversationItem({
             autoFocus
             disabled={isPending}
             aria-label="New conversation title"
-            className="w-full rounded border border-zinc-300 bg-white px-2 py-1 text-sm text-black focus:outline-none focus:ring-2 focus:ring-black dark:border-zinc-600 dark:bg-zinc-900 dark:text-white dark:focus:ring-white"
+            className="w-full rounded border border-[var(--border-soft)] bg-[var(--surface)] px-2 py-1 text-sm text-[var(--foreground)] focus:border-[var(--brand)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-soft)]"
           />
           <div className="flex gap-2">
             <button
               type="submit"
               disabled={isPending}
-              className="rounded bg-black px-2 py-1 text-xs font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+              className="rounded bg-[var(--brand)] px-2 py-1 text-xs font-medium text-white hover:bg-[var(--brand-strong)] disabled:opacity-50"
             >
               Save
             </button>
@@ -75,7 +75,7 @@ export function ConversationItem({
               type="button"
               onClick={() => setMode("display")}
               disabled={isPending}
-              className="rounded border border-zinc-300 px-2 py-1 text-xs text-black hover:bg-zinc-100 dark:border-zinc-700 dark:text-white dark:hover:bg-zinc-800"
+              className="rounded border border-[var(--border-soft)] px-2 py-1 text-xs text-[var(--foreground)] hover:bg-[var(--surface-muted)]"
             >
               Cancel
             </button>
@@ -108,7 +108,7 @@ export function ConversationItem({
             <button
               type="button"
               onClick={() => setMode("display")}
-              className="rounded border border-zinc-300 px-2 py-1 text-xs text-black hover:bg-zinc-100 dark:border-zinc-700 dark:text-white dark:hover:bg-zinc-800"
+              className="rounded border border-[var(--border-soft)] px-2 py-1 text-xs text-[var(--foreground)] hover:bg-[var(--surface-muted)]"
             >
               Cancel
             </button>
@@ -125,7 +125,7 @@ export function ConversationItem({
         aria-current={isCurrent ? "page" : undefined}
         className={`${baseClass} min-w-0 flex-1 px-3 py-2`}
       >
-        <div className="truncate text-sm font-medium text-black dark:text-white">
+        <div className="truncate text-sm font-medium text-[var(--foreground)]">
           {conversation.title || "New conversation"}
         </div>
         <div className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">

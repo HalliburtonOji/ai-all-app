@@ -171,7 +171,7 @@ test.describe("Studio v2 — image generation", () => {
     await expect(
       page.locator('[data-studio-tool-grid="true"]'),
     ).toBeVisible();
-    await expect(page.locator("[data-studio-tool-card]")).toHaveCount(5);
+    await expect(page.locator("[data-studio-tool-card]")).toHaveCount(7);
     // No specific panel rendered yet
     await expect(page.locator('[data-studio-panel="image"]')).toHaveCount(0);
     await expect(page.locator('[data-studio-panel="text"]')).toHaveCount(0);

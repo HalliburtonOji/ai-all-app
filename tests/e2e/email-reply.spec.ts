@@ -28,9 +28,10 @@ test.describe("Phase 11 — Studio email-reply drafter", () => {
       page.locator('[data-studio-tool-grid="true"]'),
     ).toBeVisible();
 
-    // 4 tool cards now (image / text / voice / email-reply).
+    // 7 tool cards now (image / text / voice / transcribe / transform /
+    // email-reply / workflows).
     const cards = page.locator("[data-studio-tool-card]");
-    expect(await cards.count()).toBe(4);
+    expect(await cards.count()).toBe(7);
 
     await page.locator('[data-studio-tool-card="email-reply"]').click();
     await page.waitForURL(/\/projects\/.+studio=email-reply/);

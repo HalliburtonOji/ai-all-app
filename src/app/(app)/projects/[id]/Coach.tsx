@@ -440,7 +440,7 @@ export function Coach({
   return (
     <section
       data-conversation-id={conversationId}
-      className="flex flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
+      className="flex flex-col overflow-hidden rounded-2xl border border-[var(--border-soft)] bg-[var(--surface)] shadow-sm"
     >
       <div
         ref={scrollRef}
@@ -505,7 +505,7 @@ export function Coach({
           e.preventDefault();
           void handleSubmit();
         }}
-        className="border-t border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900"
+        className="border-t border-[var(--border-soft)] bg-[var(--surface-muted)] p-3"
       >
         <div className="flex items-end gap-2">
           <textarea
@@ -518,12 +518,12 @@ export function Coach({
             placeholder="Ask the coach anything…"
             rows={2}
             aria-label="Message to coach"
-            className="flex-1 resize-none rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-black placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-black disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white dark:focus:ring-white"
+            className="flex-1 resize-none rounded-md border border-[var(--border-soft)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-zinc-400 focus:border-[var(--brand)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-soft)] disabled:opacity-50"
           />
           <button
             type="submit"
             disabled={isStreaming || !input.trim()}
-            className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+            className="rounded-md bg-[var(--brand)] px-5 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-[var(--brand-strong)] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
           >
             Send
           </button>
@@ -595,7 +595,7 @@ function MessageBubble({
       <div
         className={`max-w-[85%] rounded-lg px-3 py-2 text-sm sm:max-w-[75%] ${
           isUser
-            ? "whitespace-pre-wrap bg-black text-white dark:bg-white dark:text-black"
+            ? "whitespace-pre-wrap bg-[var(--brand)] text-white shadow-sm"
             : isToolFailure
               ? "border border-red-500/30 bg-red-50 text-red-900 dark:bg-red-950/30 dark:text-red-200"
               : "bg-zinc-100 text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100"
