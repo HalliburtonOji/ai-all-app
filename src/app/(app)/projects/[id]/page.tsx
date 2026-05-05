@@ -406,11 +406,13 @@ export default async function ProjectDetailPage({
                       ? "image"
                       : requestedStudio === "transcribe"
                         ? "transcribe"
-                        : requestedStudio === "email-reply"
-                          ? "email-reply"
-                          : requestedStudio === "workflows"
-                            ? "workflows"
-                            : null
+                        : requestedStudio === "transform"
+                          ? "transform"
+                          : requestedStudio === "email-reply"
+                            ? "email-reply"
+                            : requestedStudio === "workflows"
+                              ? "workflows"
+                              : null
               }
               prefill={requestedPrefill ?? null}
             />

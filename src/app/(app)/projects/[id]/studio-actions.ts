@@ -9,6 +9,10 @@ import {
 } from "@/lib/studio/generate-text";
 import { generateVoiceOverForProject } from "@/lib/studio/generate-voice";
 import { transcribeAudioForProject } from "@/lib/studio/transcribe-audio";
+import {
+  transformImageForProject,
+  type ImageTransform,
+} from "@/lib/studio/transform-image";
 import { buildStudioMemoryHint } from "@/lib/coach/build-memory";
 import { getUserApiKey } from "@/lib/byok/get-key";
 import type { ProjectFact, UserFact } from "@/types/coach";
@@ -254,6 +258,51 @@ export async function transcribeUploadedAudio(
 
   revalidatePath(`/projects/${projectId}`);
   return { outputId: result.outputId, text: result.text };
+}
+
+export interface TransformImageActionResult {
+  outputId?: string;
+  error?: string;
+}
+
+const VALID_TRANSFORMS: ReadonlySet<ImageTransform> = new Set([
+  "upscale",
+  "remove_bg",
+]);
+
+export async function transformUploadedImage(
+  formData: FormData,
+): Promise<TransformImageActionResult> {
+  const projectId = (formData.get("project_id") as string) ?? "";
+  const sourcePath = ((formData.get("source_path") as string) ?? "").trim();
+  const originalFilename =
+    ((formData.get("original_filename") as string) ?? "image").trim();
+  const transformRaw = ((formData.get("transform") as string) ?? "").trim();
+
+  if (!sourcePath) return { error: "Missing source path" };
+  if (!VALID_TRANSFORMS.has(transformRaw as ImageTransform)) {
+    return { error: "Unknown transform" };
+  }
+  const transform = transformRaw as ImageTransform;
+
+  const ctx = await loadOwnedProjectContext(projectId);
+  if ("error" in ctx) return { error: ctx.error };
+
+  const supabase = await createClient();
+  const userKey = await getUserApiKey(supabase, "replicate");
+  const result = await transformImageForProject(
+    supabase,
+    ctx.ownership.userId,
+    projectId,
+    sourcePath,
+    transform,
+    originalFilename,
+    userKey,
+  );
+  if (result.error) return { error: result.error };
+
+  revalidatePath(`/projects/${projectId}`);
+  return { outputId: result.outputId };
 }
 
 /**

@@ -17,6 +17,7 @@ interface ToolDef {
     | "text"
     | "voice"
     | "transcribe"
+    | "transform"
     | "email-reply"
     | "workflows";
   title: string;
@@ -60,6 +61,14 @@ export function StudioToolGrid({ projectId, counts }: StudioToolGridProps) {
       tagline:
         "Drop a voice memo or interview. Whisper turns it into text you can use.",
       icon: "📝",
+      badge: 0,
+    },
+    {
+      id: "transform",
+      title: "Transform image",
+      tagline:
+        "Upscale 4× or remove the background of an image you already have.",
+      icon: "🎨",
       badge: 0,
     },
     {

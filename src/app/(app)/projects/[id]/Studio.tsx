@@ -5,6 +5,7 @@ import { StudioImagePanel } from "./StudioImagePanel";
 import { StudioTextPanel } from "./StudioTextPanel";
 import { StudioVoicePanel } from "./StudioVoicePanel";
 import { StudioTranscribePanel } from "./StudioTranscribePanel";
+import { StudioTransformPanel } from "./StudioTransformPanel";
 import { StudioEmailPanel } from "./StudioEmailPanel";
 import { WorkflowsPanel } from "./workflows/WorkflowsPanel";
 
@@ -13,6 +14,7 @@ export type StudioActiveTool =
   | "text"
   | "voice"
   | "transcribe"
+  | "transform"
   | "email-reply"
   | "workflows";
 
@@ -76,6 +78,14 @@ export function Studio({
       <StudioTranscribePanel
         projectId={projectId}
         outputs={outputs.filter((o) => o.kind === "text")}
+      />
+    );
+  }
+  if (activeTool === "transform") {
+    return (
+      <StudioTransformPanel
+        projectId={projectId}
+        outputs={outputs.filter((o) => o.kind === "image")}
       />
     );
   }
