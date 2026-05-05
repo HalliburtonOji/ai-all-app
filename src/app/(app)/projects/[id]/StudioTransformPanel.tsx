@@ -18,7 +18,7 @@ const ACCEPT = "image/png,image/jpeg,image/webp";
 const BUCKET = "studio-images";
 
 const TRANSFORM_OPTIONS: Array<{
-  value: "upscale" | "remove_bg";
+  value: "upscale" | "remove_bg" | "variation";
   label: string;
   blurb: string;
 }> = [
@@ -32,13 +32,20 @@ const TRANSFORM_OPTIONS: Array<{
     label: "Remove background",
     blurb: "rembg. Clean alpha cutout. Works best on subjects with clear edges.",
   },
+  {
+    value: "variation",
+    label: "Variation",
+    blurb: "FLUX Redux. Same vibe, new composition. Useful for mood boards or A/B options.",
+  },
 ];
 
 export function StudioTransformPanel({
   projectId,
   outputs,
 }: StudioTransformPanelProps) {
-  const [transform, setTransform] = useState<"upscale" | "remove_bg">("upscale");
+  const [transform, setTransform] = useState<
+    "upscale" | "remove_bg" | "variation"
+  >("upscale");
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -91,7 +98,11 @@ export function StudioTransformPanel({
     }
 
     setProgress(
-      transform === "upscale" ? "Upscaling…" : "Removing background…",
+      transform === "upscale"
+        ? "Upscaling…"
+        : transform === "variation"
+          ? "Generating variation…"
+          : "Removing background…",
     );
     const formData = new FormData();
     formData.set("project_id", projectId);
@@ -130,7 +141,7 @@ export function StudioTransformPanel({
       </div>
 
       <div className="rounded-lg border border-dashed border-[var(--border-soft)] bg-[var(--surface)] p-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {TRANSFORM_OPTIONS.map((opt) => (
             <button
               key={opt.value}

@@ -5,7 +5,7 @@ import { randomUUID } from "crypto";
 const BUCKET = "studio-images";
 const MAX_SOURCE_BYTES = 12 * 1024 * 1024;
 
-export type ImageTransform = "upscale" | "remove_bg";
+export type ImageTransform = "upscale" | "remove_bg" | "variation";
 
 const REPLICATE_MODEL: Record<
   ImageTransform,
@@ -18,11 +18,15 @@ const REPLICATE_MODEL: Record<
   // rembg — clean alpha-channel background removal.
   remove_bg:
     "cjwbw/rembg:fb8af171cfa1616ddcf1242c093f9c46bcada5ad4cf6f2fbe8b81b330ec5c003",
+  // FLUX Redux Dev — official Black Forest Labs variations endpoint.
+  // Returns a stylistically related image; not a literal copy.
+  variation: "black-forest-labs/flux-redux-dev",
 };
 
 const TRANSFORM_LABEL: Record<ImageTransform, string> = {
   upscale: "Upscale (4×)",
   remove_bg: "Remove background",
+  variation: "Variation",
 };
 
 // Same 67-byte transparent PNG used elsewhere in the codebase.
@@ -72,7 +76,11 @@ export async function transformImageForProject(
   if (process.env.E2E_TEST_MODE === "true") {
     resultBytes = MOCK_PNG;
     modelLabel =
-      transform === "upscale" ? "mock-upscale" : "mock-remove-bg";
+      transform === "upscale"
+        ? "mock-upscale"
+        : transform === "remove_bg"
+          ? "mock-remove-bg"
+          : "mock-variation";
   } else {
     const apiKey = apiKeyOverride ?? process.env.REPLICATE_API_TOKEN;
     if (!apiKey) {
@@ -95,7 +103,13 @@ export async function transformImageForProject(
       const input =
         transform === "upscale"
           ? { image: signed.signedUrl, scale: 4 }
-          : { image: signed.signedUrl };
+          : transform === "variation"
+            ? {
+                redux_image: signed.signedUrl,
+                num_outputs: 1,
+                output_format: "png",
+              }
+            : { image: signed.signedUrl };
       const output = await replicate.run(REPLICATE_MODEL[transform], {
         input,
       });

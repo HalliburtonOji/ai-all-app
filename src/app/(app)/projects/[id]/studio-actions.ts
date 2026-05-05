@@ -268,6 +268,7 @@ export interface TransformImageActionResult {
 const VALID_TRANSFORMS: ReadonlySet<ImageTransform> = new Set([
   "upscale",
   "remove_bg",
+  "variation",
 ]);
 
 export async function transformUploadedImage(
