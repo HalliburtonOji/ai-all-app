@@ -257,7 +257,7 @@ test.describe("Phase 6c — failure forum", () => {
 
     await page.goto("/community/failures");
     await expect(
-      page.getByRole("heading", { name: /Failure forum/ }),
+      page.getByRole("heading", { name: /What didn.?t work/ }),
     ).toBeVisible();
 
     const note =

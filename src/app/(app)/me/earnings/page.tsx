@@ -48,28 +48,26 @@ export default async function EarningsPage() {
   );
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-4 py-10 sm:px-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <main className="mx-auto w-full max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border-soft)] bg-[var(--surface)] px-3 py-1 text-xs font-medium text-[var(--brand-strong)] shadow-sm">
             <span
               aria-hidden
-              className="inline-block h-2 w-2 rounded-full"
+              className="inline-block h-1.5 w-1.5 rounded-full"
               style={{ background: "var(--earn-accent)" }}
             />
-            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-              Earnings
-            </p>
+            Earn · Income tracker
           </div>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-black sm:text-4xl dark:text-white">
-            What you&apos;ve made
+          <h1 className="mt-4 text-4xl font-semibold leading-[0.95] tracking-tight text-[var(--foreground)] sm:text-5xl">
+            What you&apos;ve made.
           </h1>
         </div>
         <a
           href="/api/me/earnings/export"
           data-earnings-export="true"
           download
-          className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-black transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800"
+          className="rounded-md border border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2 text-sm font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--surface-muted)]"
         >
           Export CSV
         </a>

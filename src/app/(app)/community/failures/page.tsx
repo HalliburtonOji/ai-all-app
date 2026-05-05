@@ -53,27 +53,25 @@ export default async function FailureForumPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-10 sm:px-6">
-      <div className="flex items-center gap-2">
+    <main className="mx-auto w-full max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
+      <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border-soft)] bg-[var(--surface)] px-3 py-1 text-xs font-medium text-[var(--brand-strong)] shadow-sm">
         <span
           aria-hidden
-          className="inline-block h-2 w-2 rounded-full"
+          className="inline-block h-1.5 w-1.5 rounded-full"
           style={{ background: "var(--community-accent)" }}
         />
-        <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-          Community
-        </p>
+        Community · Failures
       </div>
-      <h1 className="mt-1 text-3xl font-bold tracking-tight text-black sm:text-4xl dark:text-white">
-        Failure forum
+      <h1 className="mt-4 text-4xl font-semibold leading-[0.95] tracking-tight text-[var(--foreground)] sm:text-5xl">
+        What didn&apos;t work.
       </h1>
-      <p className="mt-2 max-w-xl text-base text-zinc-600 dark:text-zinc-400">
-        A logged-in space for what didn&apos;t work. No likes, no
-        rankings — just receipts and reflections from people doing the
-        same thing as you. Honest beats heroic.
+      <p className="mt-4 max-w-xl text-base text-zinc-700 dark:text-zinc-300">
+        A logged-in space for misses, missteps, and lessons learned the hard
+        way. No likes, no rankings — just receipts from people doing the same
+        thing as you. Honest beats heroic.
       </p>
 
-      <div className="mt-6">
+      <div className="mt-8">
         <PostFailureForm />
       </div>
 

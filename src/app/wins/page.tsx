@@ -136,40 +136,38 @@ export default async function WinsFeedPage() {
   );
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">
-      <div className="flex items-center gap-2">
+    <main className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 sm:py-16">
+      <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border-soft)] bg-[var(--surface)] px-3 py-1 text-xs font-medium text-[var(--brand-strong)] shadow-sm">
         <span
           aria-hidden
-          className="inline-block h-2 w-2 rounded-full"
+          className="inline-block h-1.5 w-1.5 rounded-full"
           style={{ background: "var(--community-accent)" }}
         />
-        <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-          Wins
-        </p>
+        Community · Wins
       </div>
-      <h1 className="mt-1 text-3xl font-bold tracking-tight text-black sm:text-4xl dark:text-white">
-        What people are shipping
+      <h1 className="mt-4 text-4xl font-semibold leading-[0.95] tracking-tight text-[var(--foreground)] sm:text-5xl lg:text-6xl">
+        What people are shipping.
       </h1>
-      <p className="mt-2 max-w-2xl text-base text-zinc-600 dark:text-zinc-400">
+      <p className="mt-4 max-w-2xl text-base text-zinc-700 dark:text-zinc-300">
         Studio outputs creators have opted into showing publicly. Likes
-        only — no comments, no follower counts, no rankings. Add
-        something of your own from a Studio output&apos;s &ldquo;Add to
-        portfolio&rdquo; toggle.
+        only — no comments, no follower counts, no rankings. Add something
+        of your own from a Studio output&apos;s &ldquo;Add to portfolio&rdquo;
+        toggle.
       </p>
 
       {feed.length === 0 ? (
         <div
           data-wins-empty="true"
-          className="mt-8 rounded-lg border border-dashed border-zinc-300 bg-white p-8 text-center dark:border-zinc-700 dark:bg-zinc-950"
+          className="mt-12 rounded-2xl border border-dashed border-[var(--border-soft)] bg-[var(--surface)] p-12 text-center"
         >
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="text-sm text-zinc-700 dark:text-zinc-300">
             No public outputs yet. Be the first.
           </p>
         </div>
       ) : (
         <ul
           data-wins-feed="true"
-          className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
         >
           {feed.map((f) => (
             <WinTile key={f.id} item={f} viewerLoggedIn={!!viewer} />
@@ -177,7 +175,7 @@ export default async function WinsFeedPage() {
         </ul>
       )}
 
-      <footer className="mt-12 border-t border-zinc-200 pt-6 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-500">
+      <footer className="mt-16 border-t border-[var(--border-soft)] pt-6 text-xs text-zinc-500">
         <Link href="/" className="underline-offset-4 hover:underline">
           Built on AI All App
         </Link>

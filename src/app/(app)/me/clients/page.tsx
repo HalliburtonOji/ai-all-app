@@ -27,23 +27,21 @@ export default async function ClientsListPage() {
   for (const c of clients) byStatus[c.status as ClientStatus].push(c);
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-4 py-10 sm:px-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <main className="mx-auto w-full max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border-soft)] bg-[var(--surface)] px-3 py-1 text-xs font-medium text-[var(--brand-strong)] shadow-sm">
             <span
               aria-hidden
-              className="inline-block h-2 w-2 rounded-full"
+              className="inline-block h-1.5 w-1.5 rounded-full"
               style={{ background: "var(--earn-accent)" }}
             />
-            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-              Clients
-            </p>
+            Earn · Clients
           </div>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-black sm:text-4xl dark:text-white">
-            Your client roster
+          <h1 className="mt-4 text-4xl font-semibold leading-[0.95] tracking-tight text-[var(--foreground)] sm:text-5xl">
+            Your client roster.
           </h1>
-          <p className="mt-2 max-w-xl text-base text-zinc-600 dark:text-zinc-400">
+          <p className="mt-4 max-w-xl text-base text-zinc-700 dark:text-zinc-300">
             Manual roster of who you work with — active, paused, or done. Link
             an earning to a client when you log it for a clean view of who paid
             you what.
@@ -52,7 +50,7 @@ export default async function ClientsListPage() {
         <Link
           href="/me/clients/new"
           data-clients-new-button="true"
-          className="rounded-md bg-black px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+          className="rounded-md bg-[var(--brand)] px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[var(--brand-strong)]"
         >
           + New client
         </Link>

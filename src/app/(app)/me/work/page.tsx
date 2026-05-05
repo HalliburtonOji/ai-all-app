@@ -19,21 +19,19 @@ export default async function WorkLandingPage() {
   const packs = getAllProfessionPacks();
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-4 py-10 sm:px-6">
-      <div className="flex items-center gap-2">
+    <main className="mx-auto w-full max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
+      <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border-soft)] bg-[var(--surface)] px-3 py-1 text-xs font-medium text-[var(--brand-strong)] shadow-sm">
         <span
           aria-hidden
-          className="inline-block h-2 w-2 rounded-full"
+          className="inline-block h-1.5 w-1.5 rounded-full"
           style={{ background: "var(--work-accent)" }}
         />
-        <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-          Work
-        </p>
+        Work
       </div>
-      <h1 className="mt-1 text-3xl font-bold tracking-tight text-black sm:text-4xl dark:text-white">
-        AI and your job
+      <h1 className="mt-4 text-4xl font-semibold leading-[0.95] tracking-tight text-[var(--foreground)] sm:text-5xl lg:text-6xl">
+        AI and your job.
       </h1>
-      <p className="mt-2 max-w-2xl text-base text-zinc-600 dark:text-zinc-400">
+      <p className="mt-4 max-w-2xl text-base text-zinc-700 dark:text-zinc-300">
         Two things in one place. <strong>Audit my job</strong> takes 5 minutes
         and gives you an honest, personalised report on where AI fits in your
         role. <strong>Profession packs</strong> are curated guides for common
