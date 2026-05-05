@@ -133,7 +133,7 @@ export function SearchPalette() {
   return (
     <div
       data-search-palette="true"
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 px-4 pt-[10vh] backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 px-4 pt-[12vh] backdrop-blur-md"
       onClick={(e) => {
         if (e.target === e.currentTarget) setOpen(false);
       }}
@@ -142,10 +142,10 @@ export function SearchPalette() {
         role="dialog"
         aria-modal="true"
         aria-label="Search"
-        className="w-full max-w-xl overflow-hidden rounded-xl border border-[var(--border-soft)] bg-[var(--surface)] shadow-xl"
+        className="w-full max-w-2xl overflow-hidden rounded-2xl border border-[var(--border-soft)] bg-[var(--surface)] shadow-2xl shadow-black/30 ring-1 ring-black/5"
       >
-        <div className="flex items-center gap-3 border-b border-[var(--border-soft)] px-4 py-3">
-          <span aria-hidden className="text-zinc-500">🔍</span>
+        <div className="flex items-center gap-3 border-b border-[var(--border-soft)] px-5 py-4">
+          <span aria-hidden className="text-base text-zinc-500">🔍</span>
           <input
             ref={inputRef}
             type="text"
@@ -153,9 +153,9 @@ export function SearchPalette() {
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search projects, lessons, audits, clients…"
             data-search-palette-input="true"
-            className="w-full bg-transparent text-sm text-[var(--foreground)] placeholder:text-zinc-400 focus:outline-none"
+            className="w-full bg-transparent text-base text-[var(--foreground)] placeholder:text-zinc-400 focus:outline-none"
           />
-          <kbd className="hidden rounded border border-[var(--border-soft)] bg-[var(--surface-muted)] px-1.5 py-0.5 text-[10px] font-medium text-zinc-500 sm:inline">
+          <kbd className="hidden rounded-md border border-[var(--border-soft)] bg-[var(--surface-muted)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.1em] text-zinc-500 sm:inline">
             Esc
           </kbd>
         </div>

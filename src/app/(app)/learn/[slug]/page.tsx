@@ -57,7 +57,7 @@ export default async function LessonPage({ params }: PageProps) {
   const next = idx >= 0 && idx + 1 < all.length ? all[idx + 1] : null;
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">
+    <main className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 sm:py-16">
       <Link
         href="/learn"
         className="text-sm text-zinc-600 underline-offset-4 hover:underline dark:text-zinc-400"
@@ -65,24 +65,29 @@ export default async function LessonPage({ params }: PageProps) {
         ← Back to lessons
       </Link>
 
-      <header className="mt-4">
-        <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+      <header className="mt-6">
+        <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border-soft)] bg-[var(--surface)] px-3 py-1 text-xs font-medium text-[var(--brand-strong)] shadow-sm">
+          <span
+            aria-hidden
+            className="inline-block h-1.5 w-1.5 rounded-full"
+            style={{ background: "var(--learn-accent)" }}
+          />
           {BRANCH_LABELS[lesson.branch]} · Lesson {lesson.order} ·{" "}
           {lesson.estimated_minutes} min
-        </p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight text-black sm:text-4xl dark:text-white">
+        </div>
+        <h1 className="mt-4 text-4xl font-semibold leading-[1.05] tracking-tight text-[var(--foreground)] sm:text-5xl lg:text-6xl">
           {lesson.title}
         </h1>
-        <p className="mt-2 max-w-2xl text-base text-zinc-600 dark:text-zinc-400">
+        <p className="mt-4 max-w-2xl text-base text-zinc-700 dark:text-zinc-300">
           {lesson.summary}
         </p>
       </header>
 
-      <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="mt-12 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_340px]">
         <article
           data-lesson-body="true"
           data-lesson-slug={lesson.slug}
-          className="prose prose-zinc max-w-none dark:prose-invert prose-headings:font-semibold prose-h2:mt-8 prose-h2:text-xl prose-p:text-zinc-700 dark:prose-p:text-zinc-300 prose-a:text-black dark:prose-a:text-white prose-strong:text-black dark:prose-strong:text-white"
+          className="prose prose-zinc max-w-none dark:prose-invert prose-headings:font-semibold prose-h2:mt-10 prose-h2:text-2xl prose-h2:tracking-tight prose-p:text-zinc-700 dark:prose-p:text-zinc-300 prose-a:text-[var(--brand-strong)] prose-strong:text-[var(--foreground)]"
         >
           <ReactMarkdown>{lesson.body}</ReactMarkdown>
           {lesson.try_it_actions.length > 0 && (
@@ -99,14 +104,14 @@ export default async function LessonPage({ params }: PageProps) {
           )}
         </article>
 
-        <aside className="space-y-4">
+        <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
           <section
             data-lesson-status-card="true"
             data-lesson-status={status}
-            className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950"
+            className="bento-tile rounded-xl border border-[var(--border-soft)] bg-[var(--surface)] p-5"
           >
-            <h2 className="text-sm font-semibold text-black dark:text-white">
-              {isComplete ? "You finished this one." : "On your plate"}
+            <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
+              {isComplete ? "Done" : "On your plate"}
             </h2>
             <LessonCompleteToggle
               slug={lesson.slug}
@@ -116,7 +121,7 @@ export default async function LessonPage({ params }: PageProps) {
               <Link
                 href={`/learn/${next.slug}`}
                 data-lesson-next="true"
-                className="mt-3 block text-xs text-zinc-600 underline-offset-2 hover:underline dark:text-zinc-400"
+                className="mt-4 block text-xs text-zinc-600 underline-offset-2 hover:underline dark:text-zinc-400"
               >
                 Up next: {next.title} →
               </Link>

@@ -31,7 +31,7 @@ export default async function AuditDetailPage({ params }: PageProps) {
   });
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6">
+    <main className="mx-auto w-full max-w-4xl px-4 py-12 sm:px-6 sm:py-16">
       <Link
         href="/me/work"
         className="text-sm text-zinc-600 underline-offset-4 hover:underline dark:text-zinc-400"
@@ -39,11 +39,16 @@ export default async function AuditDetailPage({ params }: PageProps) {
         ← Back to Work
       </Link>
 
-      <div className="mt-4">
-        <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+      <div className="mt-6">
+        <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border-soft)] bg-[var(--surface)] px-3 py-1 text-xs font-medium text-[var(--brand-strong)] shadow-sm">
+          <span
+            aria-hidden
+            className="inline-block h-1.5 w-1.5 rounded-full"
+            style={{ background: "var(--work-accent)" }}
+          />
           Audit · {created}
-        </p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight text-black sm:text-4xl dark:text-white">
+        </div>
+        <h1 className="mt-4 text-4xl font-semibold leading-[1.05] tracking-tight text-[var(--foreground)] sm:text-5xl">
           {audit.job_title}
         </h1>
       </div>
@@ -53,7 +58,7 @@ export default async function AuditDetailPage({ params }: PageProps) {
           data-audit-summary="true"
           data-audit-id={audit.id}
           data-audit-model={audit.model ?? ""}
-          className="prose prose-zinc mt-8 max-w-none dark:prose-invert prose-headings:font-semibold prose-h2:mt-8 prose-h2:text-xl prose-p:text-zinc-700 dark:prose-p:text-zinc-300 prose-strong:text-black dark:prose-strong:text-white"
+          className="prose prose-zinc mt-10 max-w-none dark:prose-invert prose-headings:font-semibold prose-h2:mt-10 prose-h2:text-2xl prose-h2:tracking-tight prose-p:text-zinc-700 dark:prose-p:text-zinc-300 prose-a:text-[var(--brand-strong)] prose-strong:text-[var(--foreground)]"
         >
           <ReactMarkdown>{audit.summary}</ReactMarkdown>
         </article>

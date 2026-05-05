@@ -15,7 +15,7 @@ export default async function NewProjectPage({
   const tpl = templateSlug ? getProjectTemplateBySlug(templateSlug) : null;
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-10 sm:px-6">
+    <main className="mx-auto w-full max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
       <Link
         href="/projects"
         className="text-sm text-zinc-600 underline-offset-4 hover:underline dark:text-zinc-400"
@@ -23,18 +23,25 @@ export default async function NewProjectPage({
         ← Back to projects
       </Link>
 
-      <h1 className="mt-4 text-3xl font-bold tracking-tight text-black sm:text-4xl dark:text-white">
+      <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-[var(--border-soft)] bg-[var(--surface)] px-3 py-1 text-xs font-medium text-[var(--brand-strong)] shadow-sm">
+        <span
+          aria-hidden
+          className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--coach-accent)]"
+        />
         New project
+      </div>
+      <h1 className="mt-4 text-4xl font-semibold leading-[1.05] tracking-tight text-[var(--foreground)] sm:text-5xl">
+        Start a new container.
       </h1>
-      <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-        Create a container for your work. Start from a template or fill in the
-        form yourself.
+      <p className="mt-4 max-w-xl text-base text-zinc-700 dark:text-zinc-300">
+        Pick a template or fill in the form yourself. The coach attaches to
+        every Project, so this is where the system gets its hooks.
       </p>
 
       {!tpl && (
         <section
           data-project-templates="true"
-          className="mt-6 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950"
+          className="mt-10 rounded-2xl border border-[var(--border-soft)] bg-[var(--surface)] p-6"
         >
           <h2 className="text-sm font-semibold text-black dark:text-white">
             Start from a template

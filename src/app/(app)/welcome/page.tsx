@@ -22,20 +22,24 @@ export default async function WelcomePage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-12 sm:px-6">
-      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+    <main className="mx-auto w-full max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
+      <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border-soft)] bg-[var(--surface)] px-3 py-1 text-xs font-medium text-[var(--brand-strong)] shadow-sm">
+        <span
+          aria-hidden
+          className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--brand)]"
+        />
         Welcome
-      </p>
-      <h1 className="mt-1 text-3xl font-bold tracking-tight text-black sm:text-4xl dark:text-white">
-        Tell us a bit about you
+      </div>
+      <h1 className="mt-4 text-4xl font-semibold leading-[1.05] tracking-tight text-[var(--foreground)] sm:text-5xl">
+        Tell us a bit about you.
       </h1>
-      <p className="mt-2 max-w-xl text-base text-zinc-600 dark:text-zinc-400">
+      <p className="mt-4 max-w-xl text-base text-zinc-700 dark:text-zinc-300">
         Three short questions. Skip anything you don&apos;t want to answer —
         the coach gets sharper with whatever you share. Nothing here is
         public.
       </p>
 
-      <div className="mt-8">
+      <div className="mt-10">
         <WelcomeWizard />
       </div>
     </main>
