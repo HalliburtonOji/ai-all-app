@@ -12,7 +12,13 @@ interface StudioToolGridProps {
 }
 
 interface ToolDef {
-  id: "image" | "text" | "voice" | "email-reply" | "workflows";
+  id:
+    | "image"
+    | "text"
+    | "voice"
+    | "transcribe"
+    | "email-reply"
+    | "workflows";
   title: string;
   tagline: string;
   icon: string;
@@ -47,6 +53,14 @@ export function StudioToolGrid({ projectId, counts }: StudioToolGridProps) {
       tagline: "≤30s narration. Pick a voice, hit go.",
       icon: "🎙️",
       badge: counts.voice,
+    },
+    {
+      id: "transcribe",
+      title: "Transcribe audio",
+      tagline:
+        "Drop a voice memo or interview. Whisper turns it into text you can use.",
+      icon: "📝",
+      badge: 0,
     },
     {
       id: "email-reply",

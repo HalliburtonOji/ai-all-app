@@ -8,6 +8,7 @@ import {
   type TextDraftKind,
 } from "@/lib/studio/generate-text";
 import { generateVoiceOverForProject } from "@/lib/studio/generate-voice";
+import { transcribeAudioForProject } from "@/lib/studio/transcribe-audio";
 import { buildStudioMemoryHint } from "@/lib/coach/build-memory";
 import { getUserApiKey } from "@/lib/byok/get-key";
 import type { ProjectFact, UserFact } from "@/types/coach";
@@ -211,6 +212,48 @@ export async function generateVoiceOver(
 
   revalidatePath(`/projects/${projectId}`);
   return { outputId: result.outputId, charCount: result.charCount };
+}
+
+export interface TranscribeAudioActionResult {
+  outputId?: string;
+  text?: string;
+  error?: string;
+}
+
+/**
+ * Transcribe a previously-uploaded audio file. The client uploads
+ * directly to Storage (RLS-scoped by `${userId}/...` path prefix) and
+ * passes us only the path + original filename. We call Whisper from
+ * the server, persist the transcript as a text output, and delete
+ * the source upload.
+ */
+export async function transcribeUploadedAudio(
+  formData: FormData,
+): Promise<TranscribeAudioActionResult> {
+  const projectId = (formData.get("project_id") as string) ?? "";
+  const audioPath = ((formData.get("audio_path") as string) ?? "").trim();
+  const originalFilename =
+    ((formData.get("original_filename") as string) ?? "audio").trim();
+
+  if (!audioPath) return { error: "Missing audio path" };
+
+  const ctx = await loadOwnedProjectContext(projectId);
+  if ("error" in ctx) return { error: ctx.error };
+
+  const supabase = await createClient();
+  const userKey = await getUserApiKey(supabase, "openai");
+  const result = await transcribeAudioForProject(
+    supabase,
+    ctx.ownership.userId,
+    projectId,
+    audioPath,
+    originalFilename,
+    userKey,
+  );
+  if (result.error) return { error: result.error };
+
+  revalidatePath(`/projects/${projectId}`);
+  return { outputId: result.outputId, text: result.text };
 }
 
 /**
