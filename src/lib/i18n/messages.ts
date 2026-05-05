@@ -30,6 +30,18 @@ export type MessageKey =
   | "home.cta.login"
   | "home.cta.dashboard"
   | "home.layers.heading"
+  | "home.loop.label"
+  | "home.loop.heading"
+  | "home.loop.body"
+  | "home.charter.heading"
+  | "home.charter.line1"
+  | "home.charter.line2"
+  | "home.charter.line3"
+  | "home.charter.line4"
+  | "home.github.line"
+  | "home.github.cta"
+  | "home.final.heading"
+  | "home.final.body"
   | "home.notice.lessons_in_english"
   | "auth.login.heading"
   | "auth.login.subhead"
@@ -74,7 +86,26 @@ const en: Record<MessageKey, string> = {
   "home.cta.signup": "Sign up — free tier",
   "home.cta.login": "I already have an account",
   "home.cta.dashboard": "Go to your dashboard →",
-  "home.layers.heading": "Six layers, one app",
+  "home.layers.heading": "Six surfaces, one system",
+  "home.loop.label": "The loop",
+  "home.loop.heading":
+    "Five layers. One loop. Each one feeds the next.",
+  "home.loop.body":
+    "Coach knows the Project. Learn shows you the move. Studio makes the thing. Earn tracks what came of it. Community keeps you honest. Use one, all, or none — they compose.",
+  "home.charter.heading": "What's not here.",
+  "home.charter.line1":
+    "No fake countdowns. No fearmongering. No “make $50K next month.”",
+  "home.charter.line2":
+    "No follower counts, no leaderboards, no streaks to lose.",
+  "home.charter.line3":
+    "No paywall on the parts you actually need.",
+  "home.charter.line4":
+    "No AI-doom takes dressed up as career advice.",
+  "home.github.line": "Built in the open. Every line is on GitHub.",
+  "home.github.cta": "Read the source →",
+  "home.final.heading": "Start free. 90 seconds. No credit card.",
+  "home.final.body":
+    "Bring your own API keys whenever you want unlimited use.",
   "home.notice.lessons_in_english":
     "Lessons and AI outputs are in English at v1. The interface is in your language.",
   "auth.login.heading": "Welcome back",
@@ -125,7 +156,28 @@ const fr: Record<MessageKey, string> = {
   "home.cta.signup": "Inscription — niveau gratuit",
   "home.cta.login": "J'ai déjà un compte",
   "home.cta.dashboard": "Mon tableau de bord →",
-  "home.layers.heading": "Six couches, une seule app",
+  "home.layers.heading": "Six surfaces, un seul système",
+  "home.loop.label": "La boucle",
+  "home.loop.heading":
+    "Cinq couches. Une boucle. Chacune nourrit la suivante.",
+  "home.loop.body":
+    "Le Coach connaît votre Projet. Apprendre vous montre le mouvement. Studio fabrique la chose. Revenus mesure ce qui en est sorti. Communauté vous garde honnête. Utilisez-en une, toutes ou aucune — elles se combinent.",
+  "home.charter.heading": "Ce qu'il n'y a pas ici.",
+  "home.charter.line1":
+    "Pas de fausses minuteries. Pas de discours alarmistes. Pas de « gagnez 50 000 € le mois prochain ».",
+  "home.charter.line2":
+    "Pas de compteurs d'abonnés, pas de classements, pas de séries à perdre.",
+  "home.charter.line3":
+    "Pas de paywall sur les choses dont vous avez vraiment besoin.",
+  "home.charter.line4":
+    "Pas de discours de fin du monde IA déguisés en conseils carrière.",
+  "home.github.line":
+    "Construit au grand jour. Chaque ligne est sur GitHub.",
+  "home.github.cta": "Lire le code →",
+  "home.final.heading":
+    "Commencez gratuitement. 90 secondes. Sans carte bancaire.",
+  "home.final.body":
+    "Apportez vos propres clés API si vous voulez un usage illimité.",
   "home.notice.lessons_in_english":
     "Les leçons et sorties IA sont en anglais (v1). L'interface est dans votre langue.",
   "auth.login.heading": "Bon retour",
@@ -176,7 +228,28 @@ const sw: Record<MessageKey, string> = {
   "home.cta.signup": "Jisajili — bure",
   "home.cta.login": "Tayari nina akaunti",
   "home.cta.dashboard": "Nenda dashibodi yako →",
-  "home.layers.heading": "Tabaka sita, programu moja",
+  "home.layers.heading": "Sehemu sita, mfumo mmoja",
+  "home.loop.label": "Mzunguko",
+  "home.loop.heading":
+    "Tabaka tano. Mzunguko mmoja. Kila moja inalisha inayofuata.",
+  "home.loop.body":
+    "Kocha anajua Mradi wako. Jifunze inakuonyesha hatua. Studio inatengeneza kitu. Mapato inafuatilia kilichotoka. Jamii inakuhakikishia uaminifu. Tumia moja, zote, au hakuna — zinaungana.",
+  "home.charter.heading": "Yasiyokuwepo hapa.",
+  "home.charter.line1":
+    "Hakuna saa za uongo za kuhesabu. Hakuna woga. Hakuna “pata $50K mwezi ujao.”",
+  "home.charter.line2":
+    "Hakuna idadi ya wafuasi, hakuna orodha za viongozi, hakuna mfululizo wa kupoteza.",
+  "home.charter.line3":
+    "Hakuna paywall kwenye sehemu unazozihitaji kweli.",
+  "home.charter.line4":
+    "Hakuna mazungumzo ya hofu ya AI yaliyofunikwa kama ushauri wa kazi.",
+  "home.github.line":
+    "Imejengwa hadharani. Kila mstari uko GitHub.",
+  "home.github.cta": "Soma kanuni →",
+  "home.final.heading":
+    "Anza bure. Sekunde 90. Bila kadi ya benki.",
+  "home.final.body":
+    "Leta funguo zako za API wakati wowote unaposhitaji matumizi yasiyo na kikomo.",
   "home.notice.lessons_in_english":
     "Masomo na matokeo ya AI ni kwa Kiingereza (v1). Kiolesura ni kwa lugha yako.",
   "auth.login.heading": "Karibu tena",

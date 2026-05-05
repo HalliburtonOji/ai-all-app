@@ -61,3 +61,6 @@ next-env.d.ts
 
 # project-local Claude Code settings (personal, not shared)
 /.claude/
+
+# Local-only screenshot debug folder used by scripts/screenshot-landing.mjs
+tmp-screenshots/
