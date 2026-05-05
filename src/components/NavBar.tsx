@@ -63,7 +63,7 @@ export function NavBar({
     { href: "/me/clients", label: labels.clients, matchPrefix: "/me/clients" },
     { href: "/me/opportunities", label: labels.opportunities },
     { href: "/community/failures", label: labels.failures },
-    { href: "/me/keys", label: labels.keys },
+    { href: "/me/settings", label: labels.keys, matchPrefix: "/me/settings" },
   ];
 
   // Close the mobile sheet on route change.

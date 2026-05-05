@@ -75,7 +75,7 @@ const en: Record<MessageKey, string> = {
   "nav.clients": "Clients",
   "nav.opportunities": "Radar",
   "nav.failures": "Failures",
-  "nav.keys": "Keys",
+  "nav.keys": "Settings",
   "nav.search": "Search",
   "nav.logout": "Log out",
   "home.kicker": "A creator OS — wholesome, grounded, anti-hype",
@@ -144,7 +144,7 @@ const fr: Record<MessageKey, string> = {
   "nav.clients": "Clients",
   "nav.opportunities": "Radar",
   "nav.failures": "Échecs",
-  "nav.keys": "Clés",
+  "nav.keys": "Paramètres",
   "nav.search": "Rechercher",
   "nav.logout": "Déconnexion",
   "home.kicker":
@@ -216,7 +216,7 @@ const sw: Record<MessageKey, string> = {
   "nav.clients": "Wateja",
   "nav.opportunities": "Rada",
   "nav.failures": "Makosa",
-  "nav.keys": "Funguo",
+  "nav.keys": "Mipangilio",
   "nav.search": "Tafuta",
   "nav.logout": "Toka",
   "home.kicker":
