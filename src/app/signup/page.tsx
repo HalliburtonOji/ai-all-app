@@ -108,8 +108,9 @@ export default async function SignupPage({
           src="/landing/hero.png"
           alt=""
           fill
-          priority
           sizes="50vw"
+          loading="lazy"
+          decoding="async"
           className="relative object-cover"
         />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
