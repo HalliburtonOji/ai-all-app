@@ -19,6 +19,7 @@ export type MessageKey =
   | "nav.clients"
   | "nav.opportunities"
   | "nav.failures"
+  | "nav.mates"
   | "nav.keys"
   | "nav.search"
   | "nav.logout"
@@ -75,6 +76,7 @@ const en: Record<MessageKey, string> = {
   "nav.clients": "Clients",
   "nav.opportunities": "Radar",
   "nav.failures": "Failures",
+  "nav.mates": "Path mates",
   "nav.keys": "Settings",
   "nav.search": "Search",
   "nav.logout": "Log out",
@@ -144,6 +146,7 @@ const fr: Record<MessageKey, string> = {
   "nav.clients": "Clients",
   "nav.opportunities": "Radar",
   "nav.failures": "Échecs",
+  "nav.mates": "Compagnons",
   "nav.keys": "Paramètres",
   "nav.search": "Rechercher",
   "nav.logout": "Déconnexion",
@@ -216,6 +219,7 @@ const sw: Record<MessageKey, string> = {
   "nav.clients": "Wateja",
   "nav.opportunities": "Rada",
   "nav.failures": "Makosa",
+  "nav.mates": "Wenza",
   "nav.keys": "Mipangilio",
   "nav.search": "Tafuta",
   "nav.logout": "Toka",
