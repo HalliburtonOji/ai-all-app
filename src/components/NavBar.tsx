@@ -26,6 +26,7 @@ interface NavLabels {
   opportunities: string;
   failures: string;
   mates: string;
+  marketplace: string;
   keys: string;
   logout: string;
 }
@@ -65,6 +66,7 @@ export function NavBar({
     { href: "/me/opportunities", label: labels.opportunities },
     { href: "/community/failures", label: labels.failures },
     { href: "/community/mates", label: labels.mates, matchPrefix: "/community/mates" },
+    { href: "/community/marketplace", label: labels.marketplace, matchPrefix: "/community/marketplace" },
     { href: "/me/settings", label: labels.keys, matchPrefix: "/me/settings" },
   ];
 

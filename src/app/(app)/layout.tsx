@@ -36,6 +36,7 @@ export default async function AppLayout({
           opportunities: t("nav.opportunities"),
           failures: t("nav.failures"),
           mates: t("nav.mates"),
+          marketplace: t("nav.marketplace"),
           keys: t("nav.keys"),
           logout: t("nav.logout"),
         }}
