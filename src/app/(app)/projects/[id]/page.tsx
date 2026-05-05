@@ -270,7 +270,7 @@ export default async function ProjectDetailPage({
   }
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">
+    <main className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6">
       <Link
         href="/projects"
         className="text-sm text-zinc-600 underline-offset-4 hover:underline dark:text-zinc-400"
@@ -278,55 +278,65 @@ export default async function ProjectDetailPage({
         ← Back to projects
       </Link>
 
-      <div className="mt-4 flex flex-wrap items-start justify-between gap-3">
-        <ProjectTypeBadge type={project.project_type} />
-        {isArchived && (
-          <span className="rounded-full bg-zinc-200 px-2.5 py-0.5 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-            Archived
-          </span>
-        )}
-      </div>
-
-      <div className="mt-3">
-        <EditableField
-          projectId={project.id}
-          field="name"
-          initialValue={project.name}
-          maxLength={100}
-          displayClassName="block w-full px-2 -mx-2 py-1 text-3xl sm:text-4xl font-bold tracking-tight text-black dark:text-white"
-          inputClassName="text-2xl sm:text-3xl font-bold tracking-tight"
-        />
-      </div>
-
-      <div className="mt-4">
-        <EditableField
-          projectId={project.id}
-          field="description"
-          initialValue={project.description ?? ""}
-          multiline
-          emptyText="Click to add a description…"
-          displayClassName="block w-full px-2 -mx-2 py-1 text-base text-zinc-700 dark:text-zinc-300 leading-7"
-        />
-      </div>
-
-      <dl className="mt-6 grid grid-cols-1 gap-3 rounded-lg border border-zinc-200 bg-white p-4 text-sm sm:grid-cols-2 dark:border-zinc-800 dark:bg-zinc-950">
-        <div>
-          <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-            Created on
-          </dt>
-          <dd className="mt-0.5 text-black dark:text-white">
-            {formatDate(project.created_at)}
-          </dd>
+      <header
+        data-project-header="true"
+        className="relative mt-6 overflow-hidden rounded-2xl border border-[var(--border-soft)] bg-[var(--surface)] p-6 sm:p-8"
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <ProjectTypeBadge type={project.project_type} />
+          {isArchived && (
+            <span className="rounded-full bg-zinc-200 px-2.5 py-0.5 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+              Archived
+            </span>
+          )}
         </div>
-        <div>
-          <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-            Last updated
-          </dt>
-          <dd className="mt-0.5 text-black dark:text-white">
-            {formatDate(project.updated_at)}
-          </dd>
+
+        <div className="mt-4">
+          <EditableField
+            projectId={project.id}
+            field="name"
+            initialValue={project.name}
+            maxLength={100}
+            displayClassName="block w-full px-2 -mx-2 py-1 text-3xl sm:text-5xl font-semibold tracking-tight leading-[1.05] text-[var(--foreground)]"
+            inputClassName="text-2xl sm:text-4xl font-semibold tracking-tight"
+          />
         </div>
-      </dl>
+
+        <div className="mt-3 max-w-3xl">
+          <EditableField
+            projectId={project.id}
+            field="description"
+            initialValue={project.description ?? ""}
+            multiline
+            emptyText="Click to add a description…"
+            displayClassName="block w-full px-2 -mx-2 py-1 text-base leading-7 text-zinc-700 dark:text-zinc-300"
+          />
+        </div>
+
+        <dl className="mt-6 flex flex-wrap items-baseline gap-x-6 gap-y-2 text-xs">
+          <div className="flex items-baseline gap-2">
+            <dt className="font-medium uppercase tracking-wide text-zinc-500">
+              Created
+            </dt>
+            <dd className="text-[var(--foreground)]">
+              {formatDate(project.created_at)}
+            </dd>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <dt className="font-medium uppercase tracking-wide text-zinc-500">
+              Last updated
+            </dt>
+            <dd className="text-[var(--foreground)]">
+              {formatDate(project.updated_at)}
+            </dd>
+          </div>
+        </dl>
+
+        <div
+          aria-hidden
+          className="absolute inset-x-0 bottom-0 h-[2px] bg-gradient-to-r from-[var(--brand)] via-[var(--accent)] to-transparent"
+        />
+      </header>
 
       <RecentActivityStrip
         projectId={project.id}
