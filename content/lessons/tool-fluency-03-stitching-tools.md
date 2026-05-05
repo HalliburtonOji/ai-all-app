@@ -5,6 +5,7 @@ branch: tool-fluency
 order: 3
 estimated_minutes: 5
 summary: Useful AI workflows are usually 2–3 tools doing one thing each, in a sequence you actually run. Here's how to build one that lasts.
+try_it_actions: studio_text|"Sketch a 3-step recipe"|"Pick a routine task I do (e.g. weekly newsletter, client recap, lesson notes). Sketch a 3-step AI workflow for it: tool 1 → tool 2 → tool 3. One line per step, plus why each beats doing it all in one tool."
 ---
 
 ## Why this matters

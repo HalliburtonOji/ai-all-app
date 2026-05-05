@@ -5,6 +5,7 @@ branch: application
 order: 3
 estimated_minutes: 5
 summary: When and how to disclose AI involvement. The rule isn't "always disclose" or "never disclose" — it's "be honest about the work."
+try_it_actions: studio_text|"Draft a 'made with AI' line"|"Draft a 1-2 line note I can include with delivered work to honestly disclose AI involvement. Specific to my context. No legalese, no apology, no over-explaining. Just a short, accurate sentence."
 ---
 
 ## Why this matters

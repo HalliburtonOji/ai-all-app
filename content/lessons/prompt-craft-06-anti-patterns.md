@@ -5,6 +5,7 @@ branch: prompt-craft
 order: 6
 estimated_minutes: 5
 summary: A short tour of the prompt habits that feel like good practice and quietly cost you quality.
+try_it_actions: coach|"Critique my worst prompt"|"I'll paste a prompt I've been using that probably hits one of the anti-patterns from this lesson. Tell me which one (or which few), and what to swap it for."
 ---
 
 ## Why this matters

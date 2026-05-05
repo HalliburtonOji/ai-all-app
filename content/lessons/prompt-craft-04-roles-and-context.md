@@ -5,6 +5,7 @@ branch: prompt-craft
 order: 4
 estimated_minutes: 5
 summary: Telling the model who it is, who you are, and what room you're standing in. The fastest way to lift answer quality after specificity.
+try_it_actions: studio_text|"Try the role + context shape"|"You are an experienced freelance editor. I'm a writer about to send a 600-word piece to a paying client. Give me 3 short notes I'd want before I send it — the kind that catch issues a writer can't see in their own work. I'll paste the piece next."
 ---
 
 ## Why this matters

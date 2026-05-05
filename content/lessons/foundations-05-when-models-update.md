@@ -5,6 +5,7 @@ branch: foundations
 order: 5
 estimated_minutes: 4
 summary: New model versions ship every few months. What that actually changes for your work, and what to ignore.
+try_it_actions: coach|"Build a 5-minute monthly check"|"Help me build a 5-minute monthly routine for new model releases: what to actually skim, what to ignore as hype, and what's worth re-trying with the new model."
 ---
 
 ## Why this matters

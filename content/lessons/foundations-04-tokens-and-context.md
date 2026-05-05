@@ -5,6 +5,7 @@ branch: foundations
 order: 4
 estimated_minutes: 5
 summary: A practical mental model of context windows — what fits, what gets dropped, and how to work around the limits without overthinking it.
+try_it_actions: coach|"Spot the context cliff"|"Explain like I'm new: when does dropping context actually bite me, and what's a way to spot it before it does? Use one concrete example from a real workflow."
 ---
 
 ## Why this matters

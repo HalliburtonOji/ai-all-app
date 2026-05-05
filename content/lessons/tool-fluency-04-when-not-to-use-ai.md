@@ -5,6 +5,7 @@ branch: tool-fluency
 order: 4
 estimated_minutes: 4
 summary: The most experienced AI users you'll meet are the ones who know exactly when *not* to reach for it.
+try_it_actions: coach|"5 things NOT to use AI for"|"List 5 things I do (in life or work) that I should NOT use AI for, even when I technically could. Reasoning per item — tied to my specific context, not generic advice."
 ---
 
 ## Why this matters

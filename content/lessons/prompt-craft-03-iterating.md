@@ -5,6 +5,7 @@ branch: prompt-craft
 order: 3
 estimated_minutes: 4
 summary: The "regenerate" button is a trap. Editing your prompt and continuing the thread will get you somewhere; spinning the wheel won't.
+try_it_actions: coach|"Three edits to try, in order"|"I have a draft I'm not happy with. Walk me through 3 specific edits to try, in order — most likely to fix it first. I'll paste the draft when you're ready."
 ---
 
 ## Why this matters

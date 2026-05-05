@@ -5,6 +5,7 @@ branch: application
 order: 4
 estimated_minutes: 5
 summary: AI-assisted work fails sometimes. Here's how to spot it early, recover gracefully, and turn the failure into a useful lesson instead of an embarrassment.
+try_it_actions: coach|"Debug a real miss"|"I asked AI for X and it gave me Y. Help me debug: was it my prompt, the model choice, the task itself, or something else? I'll paste the prompt + the bad output."
 ---
 
 ## Why this matters

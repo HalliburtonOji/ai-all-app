@@ -5,6 +5,7 @@ branch: career-and-money
 order: 2
 estimated_minutes: 5
 summary: Generic-good portfolios aren't enough anymore. What buyers actually look for now — and how to reshape your portfolio so they pick you.
+try_it_actions: coach|"Pick 3 pieces that prove what I bring"|"Help me pick 3 pieces from my last 6 months that show what I bring on top of AI — judgment, taste, accountability — rather than what AI does on its own. Push me to be honest about which is which."
 ---
 
 ## Why this matters

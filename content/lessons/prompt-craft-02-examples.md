@@ -5,6 +5,7 @@ branch: prompt-craft
 order: 2
 estimated_minutes: 5
 summary: When you describe a style with adjectives, the model guesses. When you give it 2–3 examples, it pattern-matches.
+try_it_actions: studio_text|"Try the show-3-examples shape"|"Write 3 short examples of an apology email after a missed deadline. Vary the tone (warm, neutral, formal). One paragraph each, same situation. No emojis, no buzzwords."
 ---
 
 ## Why this matters

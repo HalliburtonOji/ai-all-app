@@ -5,6 +5,7 @@ branch: career-and-money
 order: 3
 estimated_minutes: 6
 summary: A grounded look at where money for AI-assisted work actually comes from — and where it doesn't, despite the marketing.
+try_it_actions: coach|"Find 5 plausible buyers in my network"|"Help me list 5 people in my actual network who could plausibly hire me, refer me, or vouch for me — based on what they actually do, not what I wish they did. I'll tell you about my work."; studio_text|"Draft a 4-line first-touch message"|"Draft a short, specific first-touch message I can send to one person I haven't talked to in a while. 4 sentences, no salesy language, no 'hope you're well'. I'll fill in the specifics."
 ---
 
 ## Why this matters

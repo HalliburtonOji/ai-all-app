@@ -5,6 +5,7 @@ branch: career-and-money
 order: 4
 estimated_minutes: 6
 summary: A grounded view of which skills compound over the next five years of AI-everywhere work, and what to deprioritise without panicking.
+try_it_actions: coach|"Sketch a 12-month plan that doesn't depend on hype"|"Help me sketch a 12-month plan that doesn't depend on AI hype cycles to keep working. Concrete: 2 things to build, 2 to keep doing, 1 to drop. Tied to my real situation."
 ---
 
 ## Why this matters

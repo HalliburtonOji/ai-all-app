@@ -5,6 +5,7 @@ branch: foundations
 order: 2
 estimated_minutes: 6
 summary: Hallucinations aren't a bug — they're how the system works. Here's how to catch them before they cost you.
+try_it_actions: coach|"Walk through a recent miss"|"Show me a recent case where AI confidently said something wrong, and walk me through how I'd have caught it before sharing or shipping."; studio_text|"Draft an 'AI-assisted' disclaimer"|"Draft a 60-word note I can paste at the bottom of work I'm sharing with a client, honestly disclosing that AI helped. No legalese, no apology."
 ---
 
 ## Why this matters

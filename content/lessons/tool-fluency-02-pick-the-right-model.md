@@ -5,6 +5,7 @@ branch: tool-fluency
 order: 2
 estimated_minutes: 5
 summary: Frontier models cost more for a reason; cheap models are great for a reason. A working mental model of which to reach for.
+try_it_actions: coach|"Pick a model with me"|"I'm picking a model for a task I'll describe. Help me choose between cheap-and-fast vs frontier — give me the actual trade-offs in dollars and time, not vibes."
 ---
 
 ## Why this matters

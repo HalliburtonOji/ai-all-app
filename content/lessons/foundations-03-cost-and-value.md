@@ -5,6 +5,7 @@ branch: foundations
 order: 3
 estimated_minutes: 5
 summary: What each request actually costs, and how to think about value vs spend without becoming a hoarder.
+try_it_actions: coach|"Sort this week's AI uses"|"I'm using AI on a few things this week. Help me sort which uses are worth the spend and which I should skip — based on actual value to me, not how cool the output looks."
 ---
 
 ## Why this matters

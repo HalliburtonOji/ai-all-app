@@ -5,6 +5,7 @@ branch: foundations
 order: 6
 estimated_minutes: 6
 summary: A look at what AI is actually doing to work — without the doom, without the hype, without the sales pitch.
+try_it_actions: coach|"Map the next 12 months"|"Walk me through what's likely to change in my job in the next 12 months. Concrete, specific to my role. No doom, no hype. Where AI helps, where it doesn't, what I should learn."
 ---
 
 ## Why this matters
