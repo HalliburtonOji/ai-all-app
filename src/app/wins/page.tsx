@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
 import { createClient } from "@/utils/supabase/server";
@@ -158,10 +159,25 @@ export default async function WinsFeedPage() {
       {feed.length === 0 ? (
         <div
           data-wins-empty="true"
-          className="mt-12 rounded-2xl border border-dashed border-[var(--border-soft)] bg-[var(--surface)] p-12 text-center"
+          className="mt-12 flex flex-col items-center rounded-2xl border border-dashed border-[var(--border-soft)] bg-[var(--surface)] p-12 text-center"
         >
-          <p className="text-sm text-zinc-700 dark:text-zinc-300">
-            No public outputs yet. Be the first.
+          <div className="relative mb-6 aspect-[4/3] w-full max-w-xs overflow-hidden rounded-xl bg-zinc-50 dark:bg-zinc-100">
+            <Image
+              src="/empty-states/wins.png"
+              alt=""
+              fill
+              sizes="(max-width: 768px) 80vw, 320px"
+              loading="lazy"
+              decoding="async"
+              className="object-cover"
+            />
+          </div>
+          <h2 className="text-xl font-semibold tracking-tight text-[var(--foreground)]">
+            No public outputs yet
+          </h2>
+          <p className="mt-2 max-w-sm text-sm text-zinc-700 dark:text-zinc-300">
+            Be the first to share something. From any Studio output, flip
+            &ldquo;Add to portfolio&rdquo; and it lands here.
           </p>
         </div>
       ) : (

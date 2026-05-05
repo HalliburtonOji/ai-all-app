@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
 import {
@@ -127,12 +128,35 @@ export default async function MarketplacePage() {
           Active across the community
         </h2>
         {publicOnly.length === 0 ? (
-          <p
+          <div
             data-marketplace-empty="true"
-            className="mt-4 rounded-lg border border-dashed border-[var(--border-soft)] bg-[var(--surface)] p-6 text-sm text-zinc-700 dark:text-zinc-300"
+            className="mt-4 flex flex-col items-center rounded-2xl border border-dashed border-[var(--border-soft)] bg-[var(--surface)] p-12 text-center"
           >
-            No active listings yet. Be the first to post one.
-          </p>
+            <div className="relative mb-6 aspect-[4/3] w-full max-w-xs overflow-hidden rounded-xl bg-zinc-50 dark:bg-zinc-100">
+              <Image
+                src="/empty-states/marketplace.png"
+                alt=""
+                fill
+                sizes="(max-width: 768px) 80vw, 320px"
+                loading="lazy"
+                decoding="async"
+                className="object-cover"
+              />
+            </div>
+            <h3 className="text-xl font-semibold tracking-tight text-[var(--foreground)]">
+              No active listings yet
+            </h3>
+            <p className="mt-2 max-w-sm text-sm text-zinc-700 dark:text-zinc-300">
+              Be the first to post one. Buyers reach out via your public
+              portfolio — no platform cut, no fees.
+            </p>
+            <Link
+              href="/community/marketplace/new"
+              className="mt-6 rounded-md bg-[var(--brand)] px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-[var(--brand-strong)] hover:shadow-md"
+            >
+              Post a listing
+            </Link>
+          </div>
         ) : (
           <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {publicOnly.map((l) => (
