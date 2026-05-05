@@ -13,10 +13,12 @@ test.describe("Authentication", () => {
 
     // After signup + login, we should be on /dashboard
     await expect(page).toHaveURL(/\/dashboard/);
-    // The dashboard heading greets the user by email
+    // The dashboard greets the user (heading shows "Welcome, <prefix>.")
     await expect(page.getByRole("heading", { level: 1 })).toContainText(
-      user.email,
+      /welcome/i,
     );
+    // The full email is shown in the navbar via title attribute.
+    await expect(page.locator(`[title="${user.email}"]`)).toBeVisible();
   });
 
   test("a logged-out visitor to /dashboard is redirected to /login", async ({

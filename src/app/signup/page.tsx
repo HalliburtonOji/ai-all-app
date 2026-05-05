@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { signup, loginWithGoogle } from "@/app/auth/actions";
 import { getTranslator } from "@/lib/i18n/get-locale";
@@ -11,80 +12,108 @@ export default async function SignupPage({
   const { t } = await getTranslator();
 
   return (
-    <main className="bg-canvas relative flex min-h-screen flex-col items-center justify-center px-6">
-      <div className="w-full max-w-sm">
-        <Link
-          href="/"
-          className="mb-8 flex items-center justify-center gap-2 text-sm font-medium text-[var(--brand-strong)]"
-        >
-          <span
-            aria-hidden
-            className="inline-block h-2 w-2 rounded-full bg-[var(--brand)]"
-          />
-          AI All App
-        </Link>
-        <h1 className="mb-2 text-center text-3xl font-bold tracking-tight text-black dark:text-white">
-          {t("auth.signup.heading")}
-        </h1>
-        <p className="mb-8 text-center text-sm text-zinc-600 dark:text-zinc-400">
-          {t("auth.signup.subhead")}
-        </p>
-
-        {error && (
-          <p className="mb-4 rounded-md border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400">
-            {error}
-          </p>
-        )}
-
-        <form action={signup} className="space-y-4">
-          <input
-            name="email"
-            type="email"
-            required
-            placeholder={t("auth.placeholder.email")}
-            className="w-full rounded-md border border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2 text-[var(--foreground)] placeholder:text-zinc-400 focus:border-[var(--brand)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-soft)]"
-          />
-          <input
-            name="password"
-            type="password"
-            required
-            minLength={6}
-            placeholder={t("auth.placeholder.password")}
-            className="w-full rounded-md border border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2 text-[var(--foreground)] placeholder:text-zinc-400 focus:border-[var(--brand)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-soft)]"
-          />
-          <button
-            type="submit"
-            className="w-full rounded-md bg-[var(--brand)] py-2 font-medium text-white shadow-sm transition-colors hover:bg-[var(--brand-strong)]"
-          >
-            {t("auth.signup.button")}
-          </button>
-        </form>
-
-        <div className="my-6 flex items-center gap-4">
-          <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
-          <span className="text-xs text-zinc-500">OR</span>
-          <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
-        </div>
-
-        <form action={loginWithGoogle}>
-          <button
-            type="submit"
-            className="w-full rounded-md border border-zinc-300 bg-white py-2 font-medium text-black transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800"
-          >
-            {t("auth.signup.google")}
-          </button>
-        </form>
-
-        <p className="mt-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
-          {t("auth.signup.has_account")}{" "}
+    <main className="bg-hero-stage relative grid min-h-screen grid-cols-1 lg:grid-cols-[1fr_1fr]">
+      {/* Form column */}
+      <section className="flex flex-col items-center justify-center px-6 py-16 sm:px-10">
+        <div className="w-full max-w-sm">
           <Link
-            href="/login"
-            className="font-medium text-black underline dark:text-white"
+            href="/"
+            className="mb-12 flex items-center gap-2 text-sm font-semibold text-[var(--foreground)]"
           >
-            {t("auth.signup.login_link")}
+            <span
+              aria-hidden
+              className="inline-block h-2 w-2 rounded-full bg-[var(--brand)]"
+            />
+            AI All App
           </Link>
-        </p>
-      </div>
+
+          <h1 className="text-4xl font-semibold leading-[1.05] tracking-tight text-[var(--foreground)] sm:text-5xl">
+            {t("auth.signup.heading")}
+          </h1>
+          <p className="mt-3 text-sm text-zinc-700 dark:text-zinc-300">
+            {t("auth.signup.subhead")}
+          </p>
+
+          {error && (
+            <p className="mt-6 rounded-md border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400">
+              {error}
+            </p>
+          )}
+
+          <form action={signup} className="mt-8 space-y-3">
+            <input
+              name="email"
+              type="email"
+              required
+              placeholder={t("auth.placeholder.email")}
+              className="w-full rounded-md border border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2.5 text-[var(--foreground)] placeholder:text-zinc-400 focus:border-[var(--brand)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-soft)]"
+            />
+            <input
+              name="password"
+              type="password"
+              required
+              minLength={6}
+              placeholder={t("auth.placeholder.password")}
+              className="w-full rounded-md border border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2.5 text-[var(--foreground)] placeholder:text-zinc-400 focus:border-[var(--brand)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-soft)]"
+            />
+            <button
+              type="submit"
+              className="w-full rounded-md bg-[var(--brand)] py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-[var(--brand-strong)] hover:shadow-md"
+            >
+              {t("auth.signup.button")}
+            </button>
+          </form>
+
+          <div className="my-5 flex items-center gap-4">
+            <div className="h-px flex-1 bg-[var(--border-soft)]" />
+            <span className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+              or
+            </span>
+            <div className="h-px flex-1 bg-[var(--border-soft)]" />
+          </div>
+
+          <form action={loginWithGoogle}>
+            <button
+              type="submit"
+              className="w-full rounded-md border border-[var(--border-soft)] bg-[var(--surface)] py-2.5 text-sm font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--surface-muted)]"
+            >
+              {t("auth.signup.google")}
+            </button>
+          </form>
+
+          <p className="mt-8 text-sm text-zinc-700 dark:text-zinc-300">
+            {t("auth.signup.has_account")}{" "}
+            <Link
+              href="/login"
+              className="font-medium text-[var(--foreground)] underline-offset-4 hover:underline"
+            >
+              {t("auth.signup.login_link")}
+            </Link>
+          </p>
+        </div>
+      </section>
+
+      <aside
+        aria-hidden
+        className="relative hidden overflow-hidden border-l border-[var(--border-soft)] bg-[#070707] lg:block"
+      >
+        <div
+          className="hero-glow absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(circle at 50% 55%, color-mix(in srgb, var(--brand) 55%, transparent) 0%, transparent 55%)",
+          }}
+        />
+        <Image
+          src="/landing/hero.png"
+          alt=""
+          fill
+          priority
+          sizes="50vw"
+          className="relative object-cover"
+        />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+      </aside>
     </main>
   );
 }
