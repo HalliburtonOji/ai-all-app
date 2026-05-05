@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { StudioOutput } from "@/types/studio";
 import { generateTextDraft } from "./studio-actions";
 import { StudioOutputGallery } from "./StudioOutputGallery";
+import { createChainFromRecentTextOutputs } from "./workflows/actions";
 
 interface StudioTextPanelProps {
   projectId: string;
@@ -175,6 +176,102 @@ export function StudioTextPanel({
         outputs={outputs}
         kind="text"
       />
+
+      {outputs.length >= 2 && (
+        <RecorderControls projectId={projectId} maxCount={Math.min(outputs.length, 5)} />
+      )}
     </section>
+  );
+}
+
+function RecorderControls({
+  projectId,
+  maxCount,
+}: {
+  projectId: string;
+  maxCount: number;
+}) {
+  const router = useRouter();
+  const [count, setCount] = useState<number>(Math.min(2, maxCount));
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [savedChainId, setSavedChainId] = useState<string | null>(null);
+
+  function onSave() {
+    setError(null);
+    setSavedChainId(null);
+    const formData = new FormData();
+    formData.set("project_id", projectId);
+    formData.set("count", String(count));
+    startTransition(async () => {
+      const result = await createChainFromRecentTextOutputs(formData);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      setSavedChainId(result.chainId ?? null);
+      router.refresh();
+    });
+  }
+
+  return (
+    <aside
+      data-recorder-panel="true"
+      className="rounded-lg border border-dashed border-[var(--border-soft)] bg-[var(--surface)] p-4"
+    >
+      <div className="flex flex-wrap items-baseline gap-2">
+        <h3 className="text-sm font-semibold text-[var(--foreground)]">
+          Save these as a recipe
+        </h3>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+          Turn your last few text generations into a re-runnable workflow.
+        </p>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <label className="text-xs text-zinc-600 dark:text-zinc-400">
+          How many?
+          <select
+            value={count}
+            onChange={(e) => setCount(parseInt(e.target.value, 10))}
+            disabled={isPending}
+            data-recorder-count="true"
+            className="ml-2 rounded-md border border-[var(--border-soft)] bg-[var(--surface)] px-2 py-1 text-xs text-[var(--foreground)] disabled:opacity-50"
+          >
+            {Array.from({ length: maxCount - 1 }, (_, i) => i + 2).map((n) => (
+              <option key={n} value={n}>
+                Last {n}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={isPending}
+          data-recorder-save="true"
+          className="rounded-md bg-[var(--brand)] px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-[var(--brand-strong)] disabled:opacity-50"
+        >
+          {isPending ? "Saving…" : "Save as workflow"}
+        </button>
+        {savedChainId && (
+          <Link
+            href={`/projects/${projectId}?tab=studio&studio=workflows`}
+            data-recorder-saved-link="true"
+            className="text-xs font-medium text-[var(--brand-strong)] underline-offset-2 hover:underline"
+          >
+            View in Workflows →
+          </Link>
+        )}
+      </div>
+      {error && (
+        <p
+          role="alert"
+          data-recorder-error="true"
+          className="mt-2 text-xs text-red-700 dark:text-red-400"
+        >
+          {error}
+        </p>
+      )}
+    </aside>
   );
 }

@@ -219,6 +219,101 @@ export async function createChainFromTemplate(
   return { chainId: row.id };
 }
 
+/**
+ * Phase 19 — Workflow recorder. Capture the user's recent text
+ * generations in a project as a multi-step chain in one click. The
+ * recorder isn't magical; it just turns the prompts the user already
+ * typed into chain steps with sensible defaults. Step 1 keeps its
+ * original prompt verbatim; later steps get a small `{{previous_output}}`
+ * suffix appended so the chain isn't accidentally constant. Users edit
+ * from there.
+ */
+export async function createChainFromRecentTextOutputs(
+  formData: FormData,
+): Promise<CreateChainResult> {
+  const projectId = ((formData.get("project_id") as string) ?? "").trim();
+  const countRaw = (formData.get("count") as string) ?? "2";
+  const count = Math.max(2, Math.min(MAX_CHAIN_STEPS, parseInt(countRaw, 10) || 2));
+
+  const ctx = await loadOwnedProject(projectId);
+  if ("error" in ctx) return { error: ctx.error };
+
+  const supabase = await createClient();
+  const { data: rows } = await supabase
+    .from("studio_outputs")
+    .select("id, prompt, metadata, created_at")
+    .eq("project_id", projectId)
+    .eq("kind", "text")
+    .order("created_at", { ascending: false })
+    .limit(count);
+
+  const outputs = rows ?? [];
+  if (outputs.length < 2) {
+    return {
+      error: "Need at least 2 recent text generations to record a workflow.",
+    };
+  }
+
+  // Reverse so step 1 = oldest, last step = newest. Matches how the
+  // user actually built the sequence.
+  const ordered = outputs.slice().reverse();
+
+  const steps: WorkflowChainStep[] = ordered.map((row, idx) => {
+    const meta = (row.metadata as Record<string, unknown> | null) ?? null;
+    const kindHint = (meta?.kind_hint as string) ?? "general";
+    const safeKind: TextDraftKind = ALLOWED_KIND_HINTS.has(
+      kindHint as TextDraftKind,
+    )
+      ? (kindHint as TextDraftKind)
+      : "general";
+
+    let template = String(row.prompt ?? "").slice(0, MAX_STEP_PROMPT_LEN);
+    if (idx === 0) {
+      // First step gets {{input}} appended as a hint so the chain has
+      // a parameter — many recipes start with raw material the user
+      // pastes in. Keep the original prompt verbatim above it.
+      template = `${template}\n\nInput:\n{{input}}`.slice(0, MAX_STEP_PROMPT_LEN);
+    } else {
+      template = `${template}\n\nPrevious step:\n{{previous_output}}`.slice(
+        0,
+        MAX_STEP_PROMPT_LEN,
+      );
+    }
+
+    return {
+      order: idx,
+      kind_hint: safeKind,
+      prompt_template: template,
+    };
+  });
+
+  const firstSnippet = ordered[0].prompt
+    ? String(ordered[0].prompt).split(/[.\n]/)[0].slice(0, 60)
+    : "Recipe";
+  const name = `Recipe — ${firstSnippet}`.slice(0, MAX_CHAIN_NAME_LEN);
+
+  const { data: row, error } = await supabase
+    .from("workflow_chains")
+    .insert({
+      user_id: ctx.userId,
+      project_id: ctx.projectId,
+      name,
+      description: `Captured from your last ${steps.length} text generations on ${new Date()
+        .toISOString()
+        .slice(0, 10)}.`,
+      steps,
+    })
+    .select("id")
+    .single();
+
+  if (error || !row) {
+    return { error: "Could not save chain — try again." };
+  }
+
+  revalidatePath(`/projects/${projectId}`);
+  return { chainId: row.id };
+}
+
 export async function deleteWorkflowChain(formData: FormData) {
   const id = ((formData.get("id") as string) ?? "").trim();
   const projectId = ((formData.get("project_id") as string) ?? "").trim();
