@@ -10,6 +10,7 @@ import { BRANCH_LABELS, type LessonProgressStatus } from "@/types/learn";
 import { LessonTutor } from "../LessonTutor";
 import { LessonCompleteToggle } from "./LessonCompleteToggle";
 import { LessonExercise } from "./LessonExercise";
+import { LessonActions } from "./LessonActions";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -84,6 +85,12 @@ export default async function LessonPage({ params }: PageProps) {
           className="prose prose-zinc max-w-none dark:prose-invert prose-headings:font-semibold prose-h2:mt-8 prose-h2:text-xl prose-p:text-zinc-700 dark:prose-p:text-zinc-300 prose-a:text-black dark:prose-a:text-white prose-strong:text-black dark:prose-strong:text-white"
         >
           <ReactMarkdown>{lesson.body}</ReactMarkdown>
+          {lesson.try_it_actions.length > 0 && (
+            <LessonActions
+              actions={lesson.try_it_actions}
+              lessonSlug={lesson.slug}
+            />
+          )}
           {lesson.try_it_rubric && (
             <LessonExercise
               lessonSlug={lesson.slug}

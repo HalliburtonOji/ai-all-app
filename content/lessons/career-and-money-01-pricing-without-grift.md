@@ -7,6 +7,7 @@ estimated_minutes: 6
 summary: How to charge for AI-assisted work fairly — to yourself and to your clients — without the "10x your rates" energy.
 try_it_prompt: Write your three rates (quick task / half-day / multi-week) plus, for each, what the client pays for that AI couldn't replace.
 try_it_rubric: For each tier, the user should name a clear non-AI-replaceable value (judgment, accountability, taste, relationship, specific domain knowledge, real-world context). Praise: specifics ("I've seen 12 SaaS launches go through this", "I'm responsible for the outcome"), realistic numbers grounded in their context, and honest acknowledgement of the AI in their workflow. Flag: generic value claims ("I deliver quality"), 10x-your-rates fantasies, hiding AI use, or rates that feel disconnected from named client size/budget. Be encouraging where they've thought through it; be direct where they haven't.
+try_it_actions: coach|"Pressure-test your pricing"|"I'm pricing a piece of work. Help me think through what I bring that AI can't, and what range matches that. I'll give you the context."; studio_text|"Draft a fair rate card"|"Draft a rate card for AI-assisted work — three tiers (quick task / half-day / multi-week) — with one short line per tier explaining what the client pays for that AI couldn't replace."
 ---
 
 ## Why this matters

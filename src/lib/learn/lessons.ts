@@ -4,9 +4,45 @@ import path from "node:path";
 import type {
   LearnBranch,
   Lesson,
+  LessonAction,
+  LessonActionKind,
   LessonMeta,
 } from "@/types/learn";
 import { BRANCH_ORDER } from "@/types/learn";
+
+const ACTION_KINDS: ReadonlySet<LessonActionKind> = new Set([
+  "studio_text",
+  "coach",
+  "studio_image",
+  "start_project",
+]);
+
+/**
+ * Parse pipe-delimited actions field. Format:
+ *   kind|label|prompt; kind|label|prompt
+ * Whitespace tolerant. Silently drops malformed entries so a typo in
+ * one lesson doesn't break the whole catalog.
+ */
+function parseActions(raw: string | undefined): LessonAction[] {
+  if (!raw) return [];
+  return raw
+    .split(";")
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map((entry): LessonAction | null => {
+      const parts = entry.split("|").map((p) => p.trim());
+      if (parts.length !== 3) return null;
+      const [kindRaw, label, prompt] = parts;
+      if (!ACTION_KINDS.has(kindRaw as LessonActionKind)) return null;
+      if (!label || !prompt) return null;
+      return {
+        kind: kindRaw as LessonActionKind,
+        label,
+        prompt,
+      };
+    })
+    .filter((a): a is LessonAction => a !== null);
+}
 
 /**
  * Lessons live as markdown files in `content/lessons/` at the repo
@@ -64,6 +100,7 @@ function parseFrontmatter(raw: string): { meta: LessonMeta; body: string } {
       summary: fields.summary,
       try_it_rubric: fields.try_it_rubric || null,
       try_it_prompt: fields.try_it_prompt || null,
+      try_it_actions: parseActions(fields.try_it_actions),
     },
     body: body.trim(),
   };

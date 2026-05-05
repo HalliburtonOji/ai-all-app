@@ -5,6 +5,7 @@ branch: prompt-craft
 order: 5
 estimated_minutes: 5
 summary: Save these. Tweak the slots. Skip the blank-page problem on 80 % of your AI tasks.
+try_it_actions: studio_text|"Run the Critic shape"|"You are a sharp first reader. Pretend you're seeing this for the first time. Tell me: (1) the one place I lost you, (2) the strongest line, (3) one cut you'd make. Be specific.\n\nDraft:\n[paste your draft after running this]"; studio_text|"Run the Steel-man shape"|"Steel-man this argument. Make the case as if you fully agree. Don't critique it. Just write the strongest version of the position.\n\nPosition:\n[paste position after running this]"
 ---
 
 ## Why this matters

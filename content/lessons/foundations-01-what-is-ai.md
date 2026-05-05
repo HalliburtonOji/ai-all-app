@@ -5,6 +5,7 @@ branch: foundations
 order: 1
 estimated_minutes: 5
 summary: A grounded mental model of what large language models actually do — and don't.
+try_it_actions: coach|"Test the box yourself"|"Explain in two paragraphs what a large language model is actually doing when it answers me — like I just learned what it is."; start_project|"Start your AI sandbox"|"sandbox"
 ---
 
 ## Why this matters

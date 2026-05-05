@@ -5,6 +5,7 @@ branch: tool-fluency
 order: 1
 estimated_minutes: 4
 summary: The AI tool ecosystem is louder than it is useful. A tiny stack you actually use beats a big one you don't.
+try_it_actions: coach|"Audit your stack"|"List the AI tools I'm actively using right now (or trying to). Help me cut to the 3 that earn their keep and quietly drop the rest."; studio_text|"Write your three-tool list"|"Draft a 3-bullet 'my stack' note: tool · what it's for in one line · why it earns its keep over alternatives."
 ---
 
 ## Why this matters

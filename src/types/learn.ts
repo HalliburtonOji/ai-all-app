@@ -34,6 +34,27 @@ export const BRANCH_ORDER: LearnBranch[] = [
   "career-and-money",
 ];
 
+/**
+ * One actionable chip the lesson can offer the reader so reading
+ * turns into doing. Rendered as a button below the lesson body.
+ *
+ * For project-scoped kinds (studio_text / coach / studio_image)
+ * clicking stashes the action in sessionStorage and navigates to
+ * /projects, where a picker banner lets the reader pick which
+ * project to drop the prefilled prompt into.
+ */
+export type LessonActionKind =
+  | "studio_text"
+  | "coach"
+  | "studio_image"
+  | "start_project";
+
+export interface LessonAction {
+  kind: LessonActionKind;
+  label: string;
+  prompt: string;
+}
+
 export interface LessonMeta {
   slug: string;
   title: string;
@@ -54,6 +75,12 @@ export interface LessonMeta {
    * generic placeholder if missing.
    */
   try_it_prompt: string | null;
+  /**
+   * Optional curated actions: `kind|label|prompt; kind|label|prompt`.
+   * Each chip routes the reader into a project surface with the
+   * prompt pre-filled. Empty array if not provided.
+   */
+  try_it_actions: LessonAction[];
 }
 
 export interface Lesson extends LessonMeta {

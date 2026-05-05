@@ -98,24 +98,28 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <main className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 sm:py-16">
+      <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border-soft)] bg-[var(--surface)] px-3 py-1 text-xs font-medium text-[var(--brand-strong)] shadow-sm">
+            <span
+              aria-hidden
+              className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--brand)]"
+            />
             {t("dashboard.kicker")}
-          </p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-black sm:text-4xl dark:text-white">
+          </div>
+          <h1 className="mt-4 text-4xl font-semibold leading-[0.95] tracking-tight text-[var(--foreground)] sm:text-5xl lg:text-6xl">
             {greetingName
               ? t("dashboard.greeting_named", { name: greetingName })
               : t("dashboard.greeting_anon")}
           </h1>
-          <p className="mt-2 max-w-xl text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="mt-4 max-w-xl text-base text-zinc-700 dark:text-zinc-300">
             {t("dashboard.subhead")}
           </p>
         </div>
         <Link
           href="/projects/new"
-          className="self-start rounded-md bg-[var(--brand)] px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[var(--brand-strong)] sm:self-auto"
+          className="self-start rounded-md bg-[var(--brand)] px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-[var(--brand-strong)] hover:shadow-md sm:self-auto"
         >
           {t("dashboard.new_project")}
         </Link>
@@ -169,7 +173,7 @@ export default async function DashboardPage() {
             <li key={s.href}>
               <Link
                 href={s.href}
-                className="group flex h-full flex-col items-start gap-1 rounded-lg border border-[var(--border-soft)] bg-[var(--surface)] p-3 transition-colors hover:border-[var(--border-strong)]"
+                className="bento-tile group flex h-full flex-col items-start gap-1 rounded-lg border border-[var(--border-soft)] bg-[var(--surface)] p-4"
               >
                 <span
                   aria-hidden

@@ -5,6 +5,7 @@ branch: application
 order: 1
 estimated_minutes: 5
 summary: The fastest way to learn AI is to use it on the work you'd already be doing — not on tutorial examples that don't matter to you.
+try_it_actions: start_project|"Make a project for real work"|"any"; coach|"Bring something real now"|"Tell me about something you're working on this week. I'll suggest where AI could plausibly help — and where it can't."
 ---
 
 ## Why this matters

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
 import { ProjectCard } from "@/components/ProjectCard";
 import type { Project } from "@/types/project";
+import { PendingActionBanner } from "./PendingActionBanner";
 
 export default async function ProjectsPage() {
   const supabase = await createClient();
@@ -25,6 +26,8 @@ export default async function ProjectsPage() {
           + New Project
         </Link>
       </div>
+
+      <PendingActionBanner projectIds={list.map((p) => p.id)} />
 
       {error && (
         <p className="mt-6 rounded-md border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400">
